@@ -4,9 +4,10 @@ This guide will help you set up the automated release workflow for the genius-in
 
 ## Prerequisites
 
-- Node.js 16+ installed
+- Node.js 18+ installed
 - NPM account with publishing permissions
 - GitHub repository with Actions enabled
+- GitHub CLI (`gh`) installed and authenticated
 
 ## GitHub Repository Setup
 
@@ -19,6 +20,9 @@ This guide will help you set up the automated release workflow for the genius-in
      - ✅ Require status checks to pass before merging
      - ✅ Require branches to be up to date before merging
      - ✅ Include administrators
+   - Optionally add protection rule for `develop` branch:
+     - ✅ Require a pull request before merging
+     - ✅ Require status checks to pass before merging
 
 2. **Required Status Checks**:
    - Add these required checks:
@@ -54,7 +58,18 @@ Add the following secrets in Settings → Secrets and variables → Actions:
    - Select "Automation"
    - Copy the token
 
-3. **Test Local Publishing** (optional):
+3. **Install and Authenticate GitHub CLI**:
+   ```bash
+   # Install GitHub CLI (macOS)
+   brew install gh
+   
+   # Or install on other platforms: https://cli.github.com
+   
+   # Authenticate with GitHub
+   gh auth login
+   ```
+
+4. **Test Local Publishing** (optional):
    ```bash
    npm run release:dry
    ```
@@ -62,6 +77,8 @@ Add the following secrets in Settings → Secrets and variables → Actions:
 ## Release Process
 
 ### Automated Release (Recommended)
+
+The release script now creates pull requests instead of pushing directly to main, which works with branch protection rules.
 
 1. **For Patch Release**:
    ```bash
@@ -82,6 +99,13 @@ Add the following secrets in Settings → Secrets and variables → Actions:
    ```bash
    ./scripts/release.sh beta
    ```
+
+**What the script does:**
+- Creates a release branch (e.g., `release/v1.2.3`)
+- Commits version bump and changelog updates
+- Pushes the branch and creates a PR to main
+- Provides a link to review and merge the PR
+- After PR merge, GitHub Actions automatically publishes to NPM
 
 ### Manual Release Process
 
@@ -118,7 +142,8 @@ Add the following secrets in Settings → Secrets and variables → Actions:
 - Ensures package can be built
 
 ### Release (`release.yml`)
-- Triggers on version tags (v*)
+- Triggers on pushes to main (after PR merge)
+- Automatically creates version tags
 - Publishes to NPM with `latest` tag
 - Creates GitHub release
 
@@ -158,6 +183,21 @@ npm install genius-intents@1.0.0
 - **Security**: Review Dependabot alerts regularly
 - **Test Results**: Monitor test results in GitHub Actions
 
+## Release Workflow Notes
+
+### Why Pull Requests for Releases?
+
+This approach ensures that:
+- Branch protection rules are respected
+- All releases go through the same review process
+- Status checks run before releases are published
+- There's a clear audit trail for all releases
+- Team members can review version bumps and changelog updates
+
+### Branch Protection Compatibility
+
+The release script is designed to work with strict branch protection rules on `main`. It creates release branches and PRs instead of pushing directly, ensuring compliance with your repository's security policies.
+
 ## Troubleshooting
 
 ### Common Issues:
@@ -173,6 +213,11 @@ npm install genius-intents@1.0.0
 3. **Permission Errors**:
    - Ensure NPM token has publish permissions
    - Check package name availability
+
+4. **GitHub CLI Issues**:
+   - Install GitHub CLI: `brew install gh` (macOS) or visit https://cli.github.com
+   - Authenticate: `gh auth login`
+   - Check authentication: `gh auth status`
 
 ### Getting Help:
 
