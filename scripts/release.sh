@@ -75,6 +75,32 @@ npm run build:clean
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${BLUE}📋 Current version: ${CURRENT_VERSION}${NC}"
 
+# Validate semver format
+if ! echo "$CURRENT_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' > /dev/null; then
+    echo -e "${YELLOW}⚠️  Current version '$CURRENT_VERSION' is not valid semver format${NC}"
+    echo -e "${BLUE}🔧 Converting to proper semver format...${NC}"
+    
+    # Convert to proper semver (e.g., "0.1" -> "0.1.0")
+    if echo "$CURRENT_VERSION" | grep -E '^[0-9]+\.[0-9]+$' > /dev/null; then
+        FIXED_VERSION="${CURRENT_VERSION}.0"
+    elif echo "$CURRENT_VERSION" | grep -E '^[0-9]+$' > /dev/null; then
+        FIXED_VERSION="${CURRENT_VERSION}.0.0"
+    else
+        echo -e "${RED}❌ Error: Cannot parse version '$CURRENT_VERSION'${NC}"
+        echo -e "${YELLOW}Please fix the version in package.json to proper semver format (e.g., '0.1.0')${NC}"
+        exit 1
+    fi
+    
+    echo -e "${BLUE}🔄 Updating package.json version from '$CURRENT_VERSION' to '$FIXED_VERSION'${NC}"
+    npm version $FIXED_VERSION --no-git-tag-version
+    git add package.json
+    git commit -m "fix: update version to proper semver format ($FIXED_VERSION)"
+    git push origin $CURRENT_BRANCH
+    
+    CURRENT_VERSION=$FIXED_VERSION
+    echo -e "${GREEN}✅ Version fixed: ${CURRENT_VERSION}${NC}"
+fi
+
 # Determine workflow based on release type
 if [[ "$RELEASE_TYPE" == "beta" ]]; then
     # BETA RELEASE: Create release branch from develop
