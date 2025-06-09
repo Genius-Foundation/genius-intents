@@ -43,13 +43,14 @@ jobs:
         run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Create and push tag
+        env:
+          GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag v${{ steps.extract_version.outputs.VERSION }}
+          git remote set-url origin https://x-access-token:${GH_PAT_TOKEN}@github.com/${{ github.repository }}.git
           git push origin v${{ steps.extract_version.outputs.VERSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
       - name: Publish to NPM
         run: npm publish
