@@ -120,7 +120,7 @@ if [[ "$RELEASE_TYPE" == "beta" ]]; then
     read
     
     # Commit version bump
-    git add package.json CHANGELOG.md
+    git add package.json package-lock.json CHANGELOG.md
     git commit -m "chore: bump version to ${NEW_VERSION}"
     
     # Push release branch
@@ -156,18 +156,65 @@ else
     
     echo -e "${GREEN}🎯 New stable version: ${NEW_VERSION}${NC}"
     
-    # Update CHANGELOG
-    echo -e "${BLUE}📝 Please update CHANGELOG.md with release notes${NC}"
-    echo -e "${YELLOW}Press Enter when ready to continue...${NC}"
+    # Auto-update CHANGELOG
+    echo -e "${BLUE}📝 Auto-updating CHANGELOG.md...${NC}"
+    
+    # Get today's date
+    TODAY=$(date +"%Y-%m-%d")
+    
+    # Create changelog entry
+    CHANGELOG_ENTRY="## [${NEW_VERSION#v}] - ${TODAY}
+
+### Added
+- Version bump to ${NEW_VERSION#v}
+
+### Changed
+- Package updates and improvements
+
+### Fixed
+- Bug fixes and stability improvements
+
+---
+
+"
+    
+    # Check if CHANGELOG.md exists
+    if [[ -f "CHANGELOG.md" ]]; then
+        # Insert new entry after the first line (assuming it's a title)
+        echo -e "${BLUE}📄 Updating existing CHANGELOG.md...${NC}"
+        # Create temp file with new content
+        {
+            head -n 1 CHANGELOG.md
+            echo ""
+            echo "$CHANGELOG_ENTRY"
+            tail -n +2 CHANGELOG.md
+        } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+    else
+        # Create new CHANGELOG.md
+        echo -e "${BLUE}📄 Creating new CHANGELOG.md...${NC}"
+        cat > CHANGELOG.md << EOF
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+$CHANGELOG_ENTRY
+EOF
+    fi
+    
+    echo -e "${YELLOW}📝 CHANGELOG.md has been auto-updated. Please review and edit if needed.${NC}"
+    echo -e "${BLUE}Press Enter when ready to continue...${NC}"
     read
     
     # Commit version bump directly to develop
-    git add package.json CHANGELOG.md
+    git add package.json package-lock.json CHANGELOG.md
     git commit -m "chore: bump version to ${NEW_VERSION}"
     
     # Push develop with version bump
     echo -e "${BLUE}📤 Pushing version bump to develop...${NC}"
     git push origin develop
+    
+    # Capitalize release type for display
+    RELEASE_TYPE_CAPITALIZED="$(echo ${RELEASE_TYPE:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${RELEASE_TYPE:1})"
     
     # Create PR from develop to main
     PR_TITLE="Release ${NEW_VERSION}"
@@ -181,7 +228,7 @@ This PR contains the stable release ${NEW_VERSION} from develop to main.
 - All features and fixes from develop branch
 
 ## Release Type
-- ${RELEASE_TYPE^} release (will be published to NPM with \`latest\` tag)
+- ${RELEASE_TYPE_CAPITALIZED} release (will be published to NPM with \`latest\` tag)
 
 ## Next Steps
 1. Review and merge this PR to main
