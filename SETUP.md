@@ -78,34 +78,37 @@ Add the following secrets in Settings → Secrets and variables → Actions:
 
 ### Automated Release (Recommended)
 
-The release script now creates pull requests instead of pushing directly to main, which works with branch protection rules.
+The release script follows GitFlow workflow with pull requests for branch protection compliance.
 
-1. **For Patch Release**:
-   ```bash
-   ./scripts/release.sh patch
-   ```
+**Stable Releases (from `develop` branch):**
+```bash
+git checkout develop
+./scripts/release.sh patch   # or minor/major
+```
 
-2. **For Minor Release**:
-   ```bash
-   ./scripts/release.sh minor
-   ```
+**Beta Releases (from `develop` branch):**
+```bash
+git checkout develop
+./scripts/release.sh beta
+```
 
-3. **For Major Release**:
-   ```bash
-   ./scripts/release.sh major
-   ```
+**GitFlow Workflow:**
 
-4. **For Beta Release**:
-   ```bash
-   ./scripts/release.sh beta
-   ```
+1. **Stable Releases**: 
+   - Creates PR directly from `develop` → `main` (with version bump)
+   - After merge to `main` → GitHub Actions publishes to NPM
+
+2. **Beta Releases**: 
+   - Creates release branch from `develop` (e.g., `release/beta-1.2.3`)
+   - Creates PR from release branch → `develop` 
+   - After merge to `develop` → GitHub Actions publishes beta to NPM
 
 **What the script does:**
-- Creates a release branch (e.g., `release/v1.2.3`)
-- Commits version bump and changelog updates
-- Pushes the branch and creates a PR to main
-- Provides a link to review and merge the PR
+- **Stable releases**: Version bump on develop, create develop → main PR
+- **Beta releases**: Create release branch, version bump, create release branch → develop PR  
+- Updates CHANGELOG.md with release notes
 - After PR merge, GitHub Actions automatically publishes to NPM
+- Maintains clean GitFlow separation between develop and main
 
 ### Manual Release Process
 
