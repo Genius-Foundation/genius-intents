@@ -44,15 +44,15 @@ jobs:
 
       - name: Create and push tag
         env:
-          GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
-
+          PAT_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
+          REPO_SLUG: ${{ github.repository }}
+          VERSION: ${{ steps.extract_version.outputs.VERSION }}
         run: |
-          echo "Pushing to https://x-access-token:${GH_PAT_TOKEN}@github.com/${{ github.repository }}.git"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git tag v${{ steps.extract_version.outputs.VERSION }}
-          git remote set-url origin https://x-access-token:${GH_PAT_TOKEN}@github.com/${{ github.repository }}.git
-          git push origin v${{ steps.extract_version.outputs.VERSION }}
+          git tag "v$VERSION"
+          git remote set-url origin "https://x-access-token:$PAT_TOKEN@github.com/$REPO_SLUG.git"
+          git push origin "v$VERSION"
 
       - name: Publish to NPM
         run: npm publish
