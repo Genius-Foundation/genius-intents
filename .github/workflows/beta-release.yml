@@ -46,7 +46,7 @@ jobs:
           git tag v${{ steps.extract_version.outputs.VERSION }}
           git push origin v${{ steps.extract_version.outputs.VERSION }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
 
       - name: Publish beta to NPM
         run: npm publish --tag beta
@@ -56,7 +56,7 @@ jobs:
       - name: Create GitHub Pre-Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
         with:
           tag_name: v${{ steps.extract_version.outputs.VERSION }}
           release_name: Beta Release v${{ steps.extract_version.outputs.VERSION }}
