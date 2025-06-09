@@ -48,6 +48,8 @@ jobs:
           git config --local user.name "GitHub Action"
           git tag v${{ steps.extract_version.outputs.VERSION }}
           git push origin v${{ steps.extract_version.outputs.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
       - name: Publish to NPM
         run: npm publish
@@ -57,7 +59,7 @@ jobs:
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
         with:
           tag_name: v${{ steps.extract_version.outputs.VERSION }}
           release_name: Release v${{ steps.extract_version.outputs.VERSION }}
@@ -81,7 +83,7 @@ jobs:
       - name: Create PR to sync main back to develop
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PAT_TOKEN }}
           script: |
             try {
               await github.rest.repos.getBranch({
