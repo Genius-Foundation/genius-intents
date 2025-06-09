@@ -1,0 +1,52 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.spec.ts
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Development dependencies
+node_modules/
+coverage/
+.nyc_output/
+
+# Config files
+.eslintrc*
+.prettierrc*
+.prettierignore
+jest.config.js
+tsconfig.json
+yarn.lock
+
+# Git files
+.git/
+.gitignore
+
+# Documentation
+docs/
+examples/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Scripts
+scripts/ 
