@@ -2,15 +2,13 @@ name: Beta Release
 
 on:
   push:
-    tags:
-      - 'v*-beta*'
-      - 'v*-alpha*'
-      - 'v*-rc*'
+    branches:
+      - develop
 
 jobs:
   beta-release:
     runs-on: ubuntu-latest
-    if: contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc')
+    if: "contains(github.event.head_commit.message, 'chore: bump version to') && contains(github.event.head_commit.message, 'beta')"
     
     steps:
       - name: Checkout code
@@ -22,8 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
@@ -37,13 +35,16 @@ jobs:
       - name: Build package
         run: npm run build:clean
 
-      - name: Extract version from tag
+      - name: Extract version from package.json
         id: extract_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Update package.json version
+      - name: Create and push tag
         run: |
-          npm version ${{ steps.extract_version.outputs.VERSION }} --no-git-tag-version
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag v${{ steps.extract_version.outputs.VERSION }}
+          git push origin v${{ steps.extract_version.outputs.VERSION }}
 
       - name: Publish beta to NPM
         run: npm publish --tag beta
@@ -55,14 +56,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Beta Release ${{ github.ref }}
+          tag_name: v${{ steps.extract_version.outputs.VERSION }}
+          release_name: Beta Release v${{ steps.extract_version.outputs.VERSION }}
           body: |
-            🚧 **This is a beta/prerelease version** 🚧
+            🧪 **Beta Release v${{ steps.extract_version.outputs.VERSION }}**
             
-            Install with: `npm install genius-intents@beta`
+            This is a beta/prerelease version published to NPM with the `beta` tag.
             
-            Changes in this Release
-            - Check the [CHANGELOG.md](https://github.com/Genius-Foundation/genius-intents/blob/main/CHANGELOG.md) for details
+            ## Installation
+            ```bash
+            npm install genius-intents@beta
+            # or
+            npm install genius-intents@${{ steps.extract_version.outputs.VERSION }}
+            ```
+            
+            ## Changes
+            Check the [CHANGELOG.md](https://github.com/Genius-Foundation/genius-intents/blob/main/CHANGELOG.md) for detailed release notes.
+            
+            ⚠️ **Note**: This is a beta version intended for testing. Use with caution in production.
           draft: false
           prerelease: true 

@@ -95,20 +95,22 @@ git checkout develop
 **GitFlow Workflow:**
 
 1. **Stable Releases**: 
-   - Creates PR directly from `develop` → `main` (with version bump)
+   - Creates release branch from `develop` (e.g., `release/1.2.3`)
+   - Creates PR from release branch → `main`
    - After merge to `main` → GitHub Actions publishes to NPM
 
 2. **Beta Releases**: 
-   - Creates release branch from `develop` (e.g., `release/beta-1.2.3`)
+   - Creates release branch from `develop` (e.g., `release/1.2.3-beta.0`)
    - Creates PR from release branch → `develop` 
    - After merge to `develop` → GitHub Actions publishes beta to NPM
 
 **What the script does:**
-- **Stable releases**: Version bump on develop, create develop → main PR
-- **Beta releases**: Create release branch, version bump, create release branch → develop PR  
-- Updates CHANGELOG.md with release notes
+- **All releases**: Create isolated release branch with format `release/{version}`
+- Auto-updates CHANGELOG.md with structured release notes
+- Commits `package.json`, `package-lock.json`, and `CHANGELOG.md`
+- Creates PR from release branch to appropriate target (main for stable, develop for beta)
 - After PR merge, GitHub Actions automatically publishes to NPM
-- Maintains clean GitFlow separation between develop and main
+- Prevents accidental inclusion of new commits during release process
 
 ### Manual Release Process
 
@@ -146,12 +148,15 @@ git checkout develop
 
 ### Release (`release.yml`)
 - Triggers on pushes to main (after PR merge)
+- Detects release commits with "chore: bump version to" message
 - Automatically creates version tags
 - Publishes to NPM with `latest` tag
 - Creates GitHub release
 
 ### Beta Release (`beta-release.yml`)
-- Triggers on beta/alpha/rc tags
+- Triggers on pushes to develop (after PR merge)
+- Detects beta release commits with "chore: bump version to" and "beta" in message
+- Automatically creates version tags
 - Publishes to NPM with `beta` tag
 - Creates GitHub pre-release
 
