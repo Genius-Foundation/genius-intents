@@ -45,7 +45,9 @@ jobs:
       - name: Create and push tag
         env:
           GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+
         run: |
+          echo "Pushing to https://x-access-token:${GH_PAT_TOKEN}@github.com/${{ github.repository }}.git"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag v${{ steps.extract_version.outputs.VERSION }}
