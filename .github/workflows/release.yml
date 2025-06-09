@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, 'chore: bump version to')"
+    if: "contains(github.event.head_commit.message, 'release/') || contains(github.event.head_commit.message, 'chore: bump version to')"
     
     steps:
       - name: Checkout code
@@ -48,6 +48,8 @@ jobs:
           git config --local user.name "GitHub Action"
           git tag v${{ steps.extract_version.outputs.VERSION }}
           git push origin v${{ steps.extract_version.outputs.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
       - name: Publish to NPM
         run: npm publish
@@ -57,7 +59,7 @@ jobs:
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
         with:
           tag_name: v${{ steps.extract_version.outputs.VERSION }}
           release_name: Release v${{ steps.extract_version.outputs.VERSION }}
@@ -76,4 +78,31 @@ jobs:
             ## Changes
             Check the [CHANGELOG.md](https://github.com/Genius-Foundation/genius-intents/blob/main/CHANGELOG.md) for detailed release notes.
           draft: false
-          prerelease: false 
+          prerelease: false
+
+      - name: Create PR to sync main back to develop
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT_TOKEN }}
+          script: |
+            try {
+              await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: 'develop'
+              });
+              
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Sync main to develop after release v${{ steps.extract_version.outputs.VERSION }}',
+                head: 'main',
+                base: 'develop',
+                body: '🔄 **Sync Release v${{ steps.extract_version.outputs.VERSION }} to Develop**\n\nThis PR syncs the release changes from `main` back to `develop` to keep both branches in sync.\n\n## Changes from Main\n- Version bump to v${{ steps.extract_version.outputs.VERSION }}\n- Release tag and any main-specific updates\n\n## Why This PR?\nAfter a release, `main` contains the tagged version but `develop` is behind. This sync ensures:\n- Future development starts from the correct version\n- No version conflicts in future releases\n- Clean GitFlow branch management\n\n## Next Steps\n1. Review and merge this PR to sync develop\n2. Continue development on develop branch from the new version\n\n---\n*This PR was automatically created by the release workflow.*'
+              });
+              
+              console.log(`Created sync PR #${pr.data.number}: ${pr.data.html_url}`);
+              
+            } catch (error) {
+              console.log('Error creating sync PR:', error.message);
+            } 
