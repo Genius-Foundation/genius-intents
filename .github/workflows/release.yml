@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    #if: "contains(github.event.head_commit.message, 'release/') || contains(github.event.head_commit.message, 'chore: bump version to')"
+    if: "contains(github.event.head_commit.message, 'release/') || contains(github.event.head_commit.message, 'chore: bump version to')"
     
     steps:
       - name: Checkout code
