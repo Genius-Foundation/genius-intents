@@ -212,6 +212,11 @@ export class KyberswapService implements IIntentProtocol {
             gasEstimate,
             gasLimit,
           },
+          approval: {
+            token: tokenIn,
+            amount: amountIn,
+            spender: kyberswapQuoteResponse.routerAddress,
+          },
         },
         slippage: priceResponse.slippage,
         networkIn,

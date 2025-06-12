@@ -184,6 +184,11 @@ export class ZeroXService implements IIntentProtocol {
             gasEstimate,
             gasLimit,
           },
+          approval: {
+            token: params.tokenIn,
+            amount: params.amountIn,
+            spender: zeroXQuoteResponse.transaction.to,
+          },
         },
         slippage: params.slippage,
         networkIn: params.networkIn,

@@ -186,6 +186,11 @@ export class OpenOceanService implements IIntentProtocol {
             gasEstimate: quoteData.estimatedGas.toString(),
             gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
           },
+          approval: {
+            token: tokenIn,
+            amount: amountIn,
+            spender: quoteData.to,
+          },
         },
         slippage,
         networkIn,

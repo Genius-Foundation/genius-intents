@@ -48,6 +48,17 @@ export class OkxService implements IIntentProtocol {
   public readonly priceEndpoint: string = '/api/v5/dex/aggregator/quote';
   public readonly quoteEndpoint: string = '/api/v5/dex/aggregator/swap';
 
+  public readonly approvalContracts: Record<number, string> = {
+    [ChainIdEnum.ETHEREUM]: '0x40aA958dd87FC8305b97f2BA922CDdCa374bcD7f',
+    [ChainIdEnum.ARBITRUM]: '0x70cBb871E8f30Fc8Ce23609E9E0Ea87B6b222F58',
+    [ChainIdEnum.OPTIMISM]: '0x68D6B739D2020067D1e2F713b999dA97E4d54812',
+    [ChainIdEnum.POLYGON]: '0x3B86917369B83a6892f553609F3c2F439C184e31',
+    [ChainIdEnum.BSC]: '0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6',
+    [ChainIdEnum.AVALANCHE]: '0x40aA958dd87FC8305b97f2BA922CDdCa374bcD7f',
+    [ChainIdEnum.BASE]: '0x57df6092665eb6058DE53939612413ff4B09114E',
+    [ChainIdEnum.SONIC]: '0xd321ab5589d3e8fa5df985ccfef625022e2dd910',
+  };
+
   constructor(config: IntentsSDKConfig & OKXConfig) {
     const { okxApiKey, okxSecretKey, okxPassphrase, okxProjectId } = config;
     if (!okxSecretKey || !okxApiKey || !okxPassphrase || !okxProjectId) {
@@ -228,6 +239,11 @@ export class OkxService implements IIntentProtocol {
             value: isNative(tokenIn) ? amountIn : okxQuoteResponse?.data?.[0].tx.value,
             gasEstimate,
             gasLimit,
+          },
+          approval: {
+            spender: this.approvalContracts[networkIn] || '',
+            token: tokenIn,
+            amount: okxQuoteResponse?.data?.[0].routerResult.fromTokenAmount,
           },
         },
         slippage: params.slippage >= 1 ? params.slippage / 100 : params.slippage,

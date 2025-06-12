@@ -4,7 +4,7 @@ import { SolanaTransactionData } from './solana-transaction-data';
 
 export type EvmQuoteExecutionPayload = {
   transactionData: EvmTransactionData;
-  approvalRequired?: Erc20Approval | false;
+  approval: Erc20Approval;
 };
 
 export type SolanaQuoteExecutionPayload = {
