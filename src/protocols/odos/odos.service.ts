@@ -179,6 +179,11 @@ export class OdosService implements IIntentProtocol {
             gasEstimate: odosQuoteResponse.gasEstimate.toString(),
             gasLimit: (odosQuoteResponse.gasEstimate * 1.1).toString(), // 10% buffer
           },
+          approval: {
+            token: tokenIn,
+            amount: amountIn,
+            spender: odosQuoteResponse.transaction.to,
+          },
         },
         slippage: priceResponse.slippage,
         networkIn,

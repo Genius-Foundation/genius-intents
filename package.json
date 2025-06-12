@@ -1,6 +1,6 @@
 {
   "name": "genius-intents",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "A unified SDK for interacting with intents-based protocols across multiple blockchains including Solana, Ethereum, and Sui",
   "license": "MIT",
   "author": "Samuel Videau <samuel@videau.io>",
@@ -85,7 +85,6 @@
   },
   "dependencies": {
     "@jup-ag/api": "^6.0.40",
-    "@metaplex-foundation/js": "^0.20.1",
     "@mysten/sui": "^1.26.0",
     "@raydium-io/raydium-sdk-v2": "^0.1.139-alpha",
     "@solana/web3.js": "^1.98.0",
