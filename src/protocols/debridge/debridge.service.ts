@@ -214,12 +214,11 @@ export class DeBridgeService implements IIntentProtocol {
               to: dlnQuote.tx.to,
               value: dlnQuote.tx.value || '0',
             },
-            approvalRequired: dlnQuote.tx.allowanceValue
-              ? {
-                  spender: dlnQuote.tx.to,
-                  amount: dlnQuote.tx.allowanceValue,
-                }
-              : undefined,
+            approval: {
+              spender: dlnQuote.tx.to || '',
+              amount: dlnQuote.tx.allowanceValue || '',
+              token: params.tokenIn,
+            },
           };
 
       const response: QuoteResponse = {

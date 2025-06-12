@@ -1,7 +1,5 @@
-import { EvmTransactionData } from './evm-transaction-data';
-
 export type Erc20Approval = {
   spender: string;
+  token: string;
   amount: string;
-  payload?: EvmTransactionData;
 };

@@ -137,13 +137,11 @@ export class GeniusBridgeService implements IIntentProtocol {
         throw response;
       }
 
-      let approvalRequired: Erc20Approval | false = false;
-      if (response.approvalRequired) {
-        approvalRequired = {
-          spender: response.approvalRequired.spender,
-          amount: response.approvalRequired.amount,
-        };
-      }
+      const approval: Erc20Approval = {
+        token: response.tokenIn,
+        amount: response.amountIn,
+        spender: response.evmExecutionPayload?.to || '',
+      };
 
       logger.debug('Successfully received quote info from GeniusBridge', {
         amountOut: response.amountOut,
@@ -192,7 +190,7 @@ export class GeniusBridgeService implements IIntentProtocol {
         executionPayload: evmTransactionData
           ? {
               transactionData: evmTransactionData,
-              approvalRequired,
+              approval,
             }
           : { transactionData: svmTransactionData || [] },
         protocolResponse: response,
