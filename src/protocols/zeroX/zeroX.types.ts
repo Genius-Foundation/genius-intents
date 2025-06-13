@@ -91,7 +91,7 @@ export type ZeroXTransaction = {
 };
 
 // Main API response type - this matches the raw response from the 0x API
-export type ZeroXSwapQuoteResponse = {
+export type ZeroXQuoteResponse = {
   blockNumber: string;
   buyAmount: string;
   buyToken: string;
@@ -119,15 +119,6 @@ export type ZeroXPriceResponse = {
     route: string[][];
   };
   routerAddress: string;
-};
-
-export type ZeroXQuoteResponse = {
-  amountIn: string;
-  amountOut: string;
-  gas: string;
-  data: string;
-  routerAddress: string;
-  rawResponse: ZeroXSwapQuoteResponse;
 };
 
 // Multi-quote params (if needed)

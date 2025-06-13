@@ -71,255 +71,163 @@ npm run format:check
 npm run test
 npm run build:clean
 
-# Get current version
+# Get current version for display
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${BLUE}📋 Current version: ${CURRENT_VERSION}${NC}"
-
-# Validate semver format
-if ! echo "$CURRENT_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' > /dev/null; then
-    echo -e "${YELLOW}⚠️  Current version '$CURRENT_VERSION' is not valid semver format${NC}"
-    echo -e "${BLUE}🔧 Converting to proper semver format...${NC}"
-    
-    # Convert to proper semver (e.g., "0.1" -> "0.1.0")
-    if echo "$CURRENT_VERSION" | grep -E '^[0-9]+\.[0-9]+$' > /dev/null; then
-        FIXED_VERSION="${CURRENT_VERSION}.0"
-    elif echo "$CURRENT_VERSION" | grep -E '^[0-9]+$' > /dev/null; then
-        FIXED_VERSION="${CURRENT_VERSION}.0.0"
-    else
-        echo -e "${RED}❌ Error: Cannot parse version '$CURRENT_VERSION'${NC}"
-        echo -e "${YELLOW}Please fix the version in package.json to proper semver format (e.g., '0.1.0')${NC}"
-        exit 1
-    fi
-    
-    echo -e "${BLUE}🔄 Updating package.json version from '$CURRENT_VERSION' to '$FIXED_VERSION'${NC}"
-    npm version $FIXED_VERSION --no-git-tag-version
-    git add package.json
-    git commit -m "fix: update version to proper semver format ($FIXED_VERSION)"
-    git push origin $CURRENT_BRANCH
-    
-    CURRENT_VERSION=$FIXED_VERSION
-    echo -e "${GREEN}✅ Version fixed: ${CURRENT_VERSION}${NC}"
-fi
 
 # Determine workflow based on release type
 if [[ "$RELEASE_TYPE" == "beta" ]]; then
     # BETA RELEASE: Create release branch from develop
-    NEW_VERSION=$(npm version prerelease --preid=beta --no-git-tag-version)
-    RELEASE_BRANCH="release/${NEW_VERSION#v}"
-    PR_BASE="develop"
+    echo -e "${BLUE}🧪 Preparing beta release...${NC}"
     
-    echo -e "${GREEN}🎯 New beta version: ${NEW_VERSION}${NC}"
+    # Create a temporary commit to trigger version bump calculation
+    TEMP_COMMIT_MSG="chore: prepare beta release"
     
     # Create release branch from develop
+    RELEASE_BRANCH="release/beta-$(date +%Y%m%d-%H%M%S)"
     echo -e "${BLUE}🌿 Creating beta release branch: ${RELEASE_BRANCH}${NC}"
     git checkout -b $RELEASE_BRANCH
     
-    # Auto-update CHANGELOG for beta
-    echo -e "${BLUE}📝 Auto-updating CHANGELOG.md for beta...${NC}"
-    
-    # Get today's date
-    TODAY=$(date +"%Y-%m-%d")
-    
-    # Create changelog entry
-    CHANGELOG_ENTRY="## [${NEW_VERSION#v}] - ${TODAY} (Beta)
-
-### Added
-- Beta release ${NEW_VERSION#v}
-
-### Changed
-- Testing and validation updates
-
-### Fixed
-- Bug fixes and improvements for beta testing
-
----
-
-"
-    
-    # Check if CHANGELOG.md exists
-    if [[ -f "CHANGELOG.md" ]]; then
-        # Insert new entry after the first line (assuming it's a title)
-        echo -e "${BLUE}📄 Updating existing CHANGELOG.md...${NC}"
-        # Create temp file with new content
-        {
-            head -n 1 CHANGELOG.md
-            echo ""
-            echo "$CHANGELOG_ENTRY"
-            tail -n +2 CHANGELOG.md
-        } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
-    else
-        # Create new CHANGELOG.md
-        echo -e "${BLUE}📄 Creating new CHANGELOG.md...${NC}"
-        cat > CHANGELOG.md << EOF
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-$CHANGELOG_ENTRY
-EOF
-    fi
-    
-    echo -e "${YELLOW}📝 CHANGELOG.md has been auto-updated for beta. Please review and edit if needed.${NC}"
-    echo -e "${BLUE}Press Enter when ready to continue...${NC}"
-    read
-    
-    # Commit version bump
-    git add package.json package-lock.json CHANGELOG.md
-    git commit -m "chore: bump version to ${NEW_VERSION}"
+    # Create temporary commit to mark release intent
+    git commit --allow-empty -m "chore: bump version to beta"
     
     # Push release branch
     echo -e "${BLUE}📤 Pushing beta release branch...${NC}"
     git push origin $RELEASE_BRANCH
     
-    # Create PR to develop
-    PR_TITLE="Beta Release ${NEW_VERSION}"
-    PR_BODY="🚀 **Beta Release ${NEW_VERSION}**
+    # Create PR to develop for beta
+    PR_TITLE="🧪 Beta Release"
+    PR_BODY="🧪 **Beta Release Preparation**
 
-This PR contains the automated beta release preparation for version ${NEW_VERSION}.
+This PR prepares a beta release from the develop branch.
 
-## Changes
-- Version bump to ${NEW_VERSION}
-- Updated CHANGELOG.md
+## What happens when merged:
+1. GitHub Actions will automatically:
+   - Generate version number with beta suffix
+   - Create changelog from commit history and PRs
+   - Create git tag
+   - Publish to NPM with \`beta\` tag
+   - Create GitHub pre-release
 
 ## Release Type
 - Beta release (will be published to NPM with \`beta\` tag)
-- This stays on develop branch for continued development
+- Based on current develop branch state
+- Intended for testing and feedback
+
+## Installation after release:
+\`\`\`bash
+npm install genius-intents@beta
+\`\`\`
 
 ## Next Steps
 1. Review and merge this PR to develop
-2. The beta will be automatically published to NPM via GitHub Actions
-3. Install with: \`npm install genius-intents@beta\`
+2. The beta will be automatically published via GitHub Actions
+3. Test the beta version and provide feedback
+4. Continue development on develop branch as normal"
 
-## Development Continues
-After merging, development can continue on develop branch as normal."
+    # Create PR from release branch to develop
+    echo -e "${BLUE}🔄 Creating beta release PR...${NC}"
+    gh pr create \
+        --title "$PR_TITLE" \
+        --body "$PR_BODY" \
+        --base develop \
+        --head $RELEASE_BRANCH
 
+    PR_URL=$(gh pr view --json url --jq .url)
+
+    echo -e "${GREEN}✅ Beta release PR created successfully!${NC}"
+    echo -e "${BLUE}🔗 PR URL: ${PR_URL}${NC}"
+    echo -e "${YELLOW}📋 Beta Release Next Steps:${NC}"
+    echo -e "  1. Review the PR: ${BLUE}develop ← ${RELEASE_BRANCH}${NC}"
+    echo -e "  2. Merge to develop when ready"
+    echo -e "  3. Beta will be published to NPM automatically with version and changelog"
+    echo -e "  4. Install with: ${BLUE}npm install genius-intents@beta${NC}"
+    echo -e "  5. Continue development on develop branch"
+    
+    # Switch back to develop
+    git checkout develop
+    
 else
     # STABLE RELEASE: Create release branch from develop
-    NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version)
-    RELEASE_BRANCH="release/${NEW_VERSION#v}"
-    PR_BASE="main"
+    echo -e "${BLUE}🎯 Preparing stable release...${NC}"
     
-    echo -e "${GREEN}🎯 New stable version: ${NEW_VERSION}${NC}"
+    # Capitalize release type for display
+    RELEASE_TYPE_CAPITALIZED="$(echo ${RELEASE_TYPE:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${RELEASE_TYPE:1})"
     
     # Create release branch from develop
+    RELEASE_BRANCH="release/$(date +%Y%m%d-%H%M%S)"
     echo -e "${BLUE}🌿 Creating stable release branch: ${RELEASE_BRANCH}${NC}"
     git checkout -b $RELEASE_BRANCH
     
-    # Auto-update CHANGELOG
-    echo -e "${BLUE}📝 Auto-updating CHANGELOG.md...${NC}"
-    
-    # Get today's date
-    TODAY=$(date +"%Y-%m-%d")
-    
-    # Create changelog entry
-    CHANGELOG_ENTRY="## [${NEW_VERSION#v}] - ${TODAY}
-
-### Added
-- Version bump to ${NEW_VERSION#v}
-
-### Changed
-- Package updates and improvements
-
-### Fixed
-- Bug fixes and stability improvements
-
----
-
-"
-    
-    # Check if CHANGELOG.md exists
-    if [[ -f "CHANGELOG.md" ]]; then
-        # Insert new entry after the first line (assuming it's a title)
-        echo -e "${BLUE}📄 Updating existing CHANGELOG.md...${NC}"
-        # Create temp file with new content
-        {
-            head -n 1 CHANGELOG.md
-            echo ""
-            echo "$CHANGELOG_ENTRY"
-            tail -n +2 CHANGELOG.md
-        } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
-    else
-        # Create new CHANGELOG.md
-        echo -e "${BLUE}📄 Creating new CHANGELOG.md...${NC}"
-        cat > CHANGELOG.md << EOF
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-$CHANGELOG_ENTRY
-EOF
-    fi
-    
-    echo -e "${YELLOW}📝 CHANGELOG.md has been auto-updated. Please review and edit if needed.${NC}"
-    echo -e "${BLUE}Press Enter when ready to continue...${NC}"
-    read
-    
-    # Commit version bump to release branch
-    git add package.json package-lock.json CHANGELOG.md
-    git commit -m "chore: bump version to ${NEW_VERSION}"
+    # Create temporary commit to mark release intent
+    git commit --allow-empty -m "chore: bump version to ${RELEASE_TYPE}"
     
     # Push release branch
     echo -e "${BLUE}📤 Pushing stable release branch...${NC}"
     git push origin $RELEASE_BRANCH
     
-    # Capitalize release type for display
-    RELEASE_TYPE_CAPITALIZED="$(echo ${RELEASE_TYPE:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${RELEASE_TYPE:1})"
-    
     # Create PR from release branch to main
-    PR_TITLE="Release ${NEW_VERSION}"
-    PR_BODY="🚀 **Release ${NEW_VERSION}**
+    PR_TITLE="🚀 ${RELEASE_TYPE_CAPITALIZED} Release"
+    PR_BODY="🚀 **${RELEASE_TYPE_CAPITALIZED} Release Preparation**
 
-This PR contains the stable release ${NEW_VERSION} from the release branch.
+This PR contains a ${RELEASE_TYPE} release from the develop branch.
 
-## Changes
-- Version bump to ${NEW_VERSION}
-- Updated CHANGELOG.md
-- All features and fixes from develop branch (frozen at release branch creation)
+## What happens when merged to main:
+1. GitHub Actions will automatically:
+   - Generate new version number (${RELEASE_TYPE} bump)
+   - Create comprehensive changelog from commit history and PRs
+   - Create git tag
+   - Update package.json version
+   - Update CHANGELOG.md file
+   - Publish to NPM with \`latest\` tag
+   - Create GitHub release
+   - Create sync PR back to develop
 
 ## Release Type
 - ${RELEASE_TYPE_CAPITALIZED} release (will be published to NPM with \`latest\` tag)
+- All features and fixes from develop branch (frozen at release branch creation)
+
+## Installation after release:
+\`\`\`bash
+npm install genius-intents@latest
+\`\`\`
 
 ## Next Steps
 1. Review and merge this PR to main
-2. The release will be automatically published to NPM via GitHub Actions
-3. Install with: \`npm install genius-intents@latest\`
+2. The release will be automatically published via GitHub Actions with full changelog
+3. Main will be synced back to develop automatically
 
-## Post-Release
-After merging, main will be tagged and published. Consider merging main back to develop to sync any release-specific changes."
-fi
+## Changelog Preview
+The final changelog will be automatically generated from:
+- Conventional commit messages
+- Merged PR titles and descriptions
+- Commit history since last release
 
-# Create the PR
-echo -e "${BLUE}🔄 Creating pull request...${NC}"
-gh pr create \
-    --title "$PR_TITLE" \
-    --body "$PR_BODY" \
-    --base $PR_BASE \
-    --head $RELEASE_BRANCH
+*Full changelog will be available in the GitHub release and CHANGELOG.md*"
 
-PR_URL=$(gh pr view --json url --jq .url)
+    # Create the PR
+    echo -e "${BLUE}🔄 Creating release PR...${NC}"
+    gh pr create \
+        --title "$PR_TITLE" \
+        --body "$PR_BODY" \
+        --base main \
+        --head $RELEASE_BRANCH
 
-echo -e "${GREEN}✅ Release PR created successfully!${NC}"
-echo -e "${BLUE}🔗 PR URL: ${PR_URL}${NC}"
+    PR_URL=$(gh pr view --json url --jq .url)
 
-if [[ "$RELEASE_TYPE" == "beta" ]]; then
-    echo -e "${YELLOW}📋 Beta Release Next Steps:${NC}"
-    echo -e "  1. Review the PR: ${BLUE}develop ← ${RELEASE_BRANCH}${NC}"
-    echo -e "  2. Merge to develop when ready"
-    echo -e "  3. Beta will be published to NPM automatically"
-    echo -e "  4. Continue development on develop branch"
-    
-    # Switch back to develop
-    git checkout develop
-else
+    echo -e "${GREEN}✅ Release PR created successfully!${NC}"
+    echo -e "${BLUE}🔗 PR URL: ${PR_URL}${NC}"
     echo -e "${YELLOW}📋 Stable Release Next Steps:${NC}"
     echo -e "  1. Review the PR: ${BLUE}main ← ${RELEASE_BRANCH}${NC}"
     echo -e "  2. Merge to main when ready"
-    echo -e "  3. Release will be published to NPM automatically"
-    echo -e "  4. Consider merging main back to develop after release"
+    echo -e "  3. Release will be published to NPM automatically with full changelog"
+    echo -e "  4. CHANGELOG.md will be updated automatically"
+    echo -e "  5. Main will be synced back to develop automatically"
     
     # Switch back to develop
     git checkout develop
 fi
 
 echo -e "${BLUE}🎉 Release process completed!${NC}"
-echo -e "${YELLOW}⏳ Waiting for PR merge to complete the release...${NC}" 
+echo -e "${YELLOW}⏳ The changelog will be automatically generated from your commit history and PRs when the PR is merged.${NC}"
+echo -e "${GREEN}💡 Tip: Use conventional commit messages (feat:, fix:, docs:, etc.) for better changelog categorization!${NC}"

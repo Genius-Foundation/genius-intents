@@ -12,12 +12,7 @@ import { NATIVE_ADDRESS } from '../../utils/constants';
 import { isNative } from '../../utils/is-native';
 import { sdkError } from '../../utils/throw-error';
 import { createErrorMessage } from '../../utils/create-error-message';
-import {
-  ZeroXConfig,
-  ZeroXPriceResponse,
-  ZeroXQuoteResponse,
-  ZeroXSwapQuoteResponse,
-} from './zeroX.types';
+import { ZeroXConfig, ZeroXPriceResponse, ZeroXQuoteResponse } from './zeroX.types';
 
 let logger: ILogger;
 
@@ -95,7 +90,7 @@ export class ZeroXService implements IIntentProtocol {
           gas: quoteResponse.estimatedGas || '0',
           route: [], // 0x doesn't provide route information in the same format as other DEXes
         },
-        routerAddress: quoteResponse.protocolResponse.rawResponse.transaction.to,
+        routerAddress: quoteResponse.protocolResponse.transaction.to,
       };
 
       return {
@@ -127,12 +122,18 @@ export class ZeroXService implements IIntentProtocol {
     params.tokenIn = isNative(params.tokenIn) ? NATIVE_ADDRESS : params.tokenIn;
     params.tokenOut = isNative(params.tokenOut) ? NATIVE_ADDRESS : params.tokenOut;
     this.validatePriceParams(params);
+    if (params.receiver && params.receiver !== params.from) {
+      throw sdkError(
+        SdkErrorEnum.INVALID_PARAMS,
+        '0x does not support different receiver addresses for quotes',
+      );
+    }
 
     try {
       const requestUrl = this.buildRequestUrl(params);
       logger.debug(`Making request to 0x API: ${requestUrl}`);
 
-      const response = await axios.get<ZeroXSwapQuoteResponse>(requestUrl, {
+      const response = await axios.get<ZeroXQuoteResponse>(requestUrl, {
         headers: {
           // eslint-disable-next-line @typescript-eslint/naming-convention
           'Content-Type': 'application/json',
@@ -158,16 +159,6 @@ export class ZeroXService implements IIntentProtocol {
       const gasEstimate = zeroXQuoteResponse.transaction.gas;
       const gasLimit = Math.floor(Number(gasEstimate) * 1.1).toString(); // 10% buffer
 
-      // Format the response to match our expected QuoteResponse structure
-      const formattedQuoteResponse: ZeroXQuoteResponse = {
-        amountIn: zeroXQuoteResponse.sellAmount,
-        amountOut: zeroXQuoteResponse.buyAmount,
-        gas: zeroXQuoteResponse.transaction.gas,
-        data: zeroXQuoteResponse.transaction.data,
-        routerAddress: zeroXQuoteResponse.transaction.to,
-        rawResponse: zeroXQuoteResponse,
-      };
-
       return {
         protocol: this.protocol,
         tokenIn: params.tokenIn,
@@ -175,7 +166,7 @@ export class ZeroXService implements IIntentProtocol {
         amountIn: params.amountIn,
         amountOut: zeroXQuoteResponse.buyAmount,
         from: params.from,
-        receiver: params.receiver || params.from,
+        receiver: params.from,
         executionPayload: {
           transactionData: {
             data: zeroXQuoteResponse.transaction.data,
@@ -194,7 +185,7 @@ export class ZeroXService implements IIntentProtocol {
         networkIn: params.networkIn,
         networkOut: params.networkOut,
         estimatedGas: gasEstimate,
-        protocolResponse: formattedQuoteResponse,
+        protocolResponse: zeroXQuoteResponse,
       };
     } catch (error: unknown) {
       const { errorMessage, errorMessageError } = createErrorMessage(error);
