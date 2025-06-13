@@ -8,8 +8,10 @@ on:
 jobs:
   beta-release:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, 'release/') || contains(github.event.head_commit.message, 'chore: bump version to')"
-    
+    if: |
+      (contains(github.event.head_commit.message, 'release/') || contains(github.event.head_commit.message, 'chore: bump version to')) &&
+      contains(github.event.head_commit.message, 'beta')
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,19 +64,19 @@ jobs:
           release_name: Beta Release v${{ steps.extract_version.outputs.VERSION }}
           body: |
             🧪 **Beta Release v${{ steps.extract_version.outputs.VERSION }}**
-            
+
             This is a beta/prerelease version published to NPM with the `beta` tag.
-            
+
             ## Installation
             ```bash
             npm install genius-intents@beta
             # or
             npm install genius-intents@${{ steps.extract_version.outputs.VERSION }}
             ```
-            
+
             ## Changes
             Check the [CHANGELOG.md](https://github.com/Genius-Foundation/genius-intents/blob/main/CHANGELOG.md) for detailed release notes.
-            
+
             ⚠️ **Note**: This is a beta version intended for testing. Use with caution in production.
           draft: false
-          prerelease: true 
+          prerelease: true
