@@ -17,6 +17,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GIT_PAT_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions [Bot]"
 
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
@@ -37,18 +43,70 @@ jobs:
       - name: Build package
         run: npm run build:clean
 
-      - name: Extract version from package.json
-        id: extract_version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      - name: Bump version and create beta tag
+        id: tag-version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GIT_PAT_TOKEN }}
+          default_bump: prerelease
+          default_prerelease_bump: beta
+          release_branches: develop
+          tag_prefix: v
+          create_annotated_tag: true
+          pre_release_branches: develop
 
-      - name: Create and push tag
+      - name: Update package.json version
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag v${{ steps.extract_version.outputs.VERSION }}
-          git push origin v${{ steps.extract_version.outputs.VERSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
+          NEW_VERSION="${{ steps.tag-version.outputs.new_version }}"
+          npm version $NEW_VERSION --no-git-tag-version
+          git add package.json package-lock.json
+          git commit -m "chore: update package.json to v$NEW_VERSION (beta)" || echo "No changes to commit"
+          git push origin develop
+
+      - name: Update CHANGELOG.md for beta
+        run: |
+          NEW_VERSION="${{ steps.tag-version.outputs.new_version }}"
+          TODAY=$(date +"%Y-%m-%d")
+          CHANGELOG_CONTENT="${{ steps.tag-version.outputs.changelog }}"
+
+          # Create new changelog entry for beta
+          NEW_ENTRY="## [$NEW_VERSION] - $TODAY (Beta)\n\n🧪 **This is a beta release for testing purposes.**\n\n$CHANGELOG_CONTENT\n\n⚠️ **Beta Release Notes:**\n- This version is intended for testing and development\n- May contain experimental features\n- Not recommended for production use\n- Feedback and bug reports are welcome\n\n---\n\n"
+
+          # Update or create CHANGELOG.md
+          if [ -f "CHANGELOG.md" ]; then
+            # Insert new entry after title/header
+            if grep -q "^# " CHANGELOG.md; then
+              # Has title, insert after first line
+              {
+                head -n 1 CHANGELOG.md
+                echo ""
+                echo -e "$NEW_ENTRY"
+                tail -n +2 CHANGELOG.md
+              } > CHANGELOG_temp.md && mv CHANGELOG_temp.md CHANGELOG.md
+            else
+              # No title, prepend entry
+              {
+                echo -e "$NEW_ENTRY"
+                cat CHANGELOG.md
+              } > CHANGELOG_temp.md && mv CHANGELOG_temp.md CHANGELOG.md
+            fi
+          else
+            # Create new CHANGELOG.md
+            {
+              echo "# Changelog"
+              echo ""
+              echo "All notable changes to this project will be documented in this file."
+              echo ""
+              echo -e "$NEW_ENTRY"
+            } > CHANGELOG.md
+          fi
+
+          # Commit changelog if there are changes
+          if ! git diff --quiet CHANGELOG.md; then
+            git add CHANGELOG.md
+            git commit -m "docs: update CHANGELOG.md for v$NEW_VERSION (beta)"
+            git push origin develop
+          fi
 
       - name: Publish beta to NPM
         run: npm publish --tag beta
@@ -56,27 +114,32 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Pre-Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.extract_version.outputs.VERSION }}
-          release_name: Beta Release v${{ steps.extract_version.outputs.VERSION }}
+          tag_name: v${{ steps.tag-version.outputs.new_version }}
+          name: Beta Release v${{ steps.tag-version.outputs.new_version }}
           body: |
-            🧪 **Beta Release v${{ steps.extract_version.outputs.VERSION }}**
+            🧪 **Beta Release v${{ steps.tag-version.outputs.new_version }}**
 
             This is a beta/prerelease version published to NPM with the `beta` tag.
 
-            ## Installation
+            ${{ steps.tag-version.outputs.changelog }}
+
+            ## 📦 Installation
             ```bash
             npm install genius-intents@beta
             # or
-            npm install genius-intents@${{ steps.extract_version.outputs.VERSION }}
+            npm install genius-intents@${{ steps.tag-version.outputs.new_version }}
             ```
 
-            ## Changes
-            Check the [CHANGELOG.md](https://github.com/Genius-Foundation/genius-intents/blob/main/CHANGELOG.md) for detailed release notes.
+            ## ⚠️ Beta Release Notes
+            - This version is intended for testing and development
+            - May contain experimental features  
+            - Not recommended for production use
+            - Feedback and bug reports are welcome
 
-            ⚠️ **Note**: This is a beta version intended for testing. Use with caution in production.
+            Please test thoroughly and report any issues!
           draft: false
           prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_PAT_TOKEN }}
