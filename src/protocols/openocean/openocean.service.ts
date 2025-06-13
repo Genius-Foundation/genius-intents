@@ -178,20 +178,23 @@ export class OpenOceanService implements IIntentProtocol {
         amountOut: quoteData.outAmount,
         from,
         receiver: receiver || from,
-        executionPayload: {
-          transactionData: {
-            data: quoteData.data,
-            to: quoteData.to,
-            value: quoteData.value,
-            gasEstimate: quoteData.estimatedGas.toString(),
-            gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
-          },
-          approval: {
-            token: tokenIn,
-            amount: amountIn,
-            spender: quoteData.to,
-          },
-        },
+        executionPayload:
+          networkIn === ChainIdEnum.SOLANA
+            ? { transactionData: [quoteData.data] }
+            : {
+                transactionData: {
+                  data: quoteData.data,
+                  to: quoteData.to,
+                  value: quoteData.value,
+                  gasEstimate: quoteData.estimatedGas.toString(),
+                  gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
+                },
+                approval: {
+                  token: tokenIn,
+                  amount: amountIn,
+                  spender: quoteData.to,
+                },
+              },
         slippage,
         networkIn,
         networkOut,
