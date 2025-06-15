@@ -1,6 +1,5 @@
 import { Erc20Approval } from './erc20-approval';
 import { EvmTransactionData } from './evm-transaction-data';
-import { SolanaTransactionData } from './solana-transaction-data';
 
 export type EvmQuoteExecutionPayload = {
   transactionData: EvmTransactionData;
@@ -8,7 +7,8 @@ export type EvmQuoteExecutionPayload = {
 };
 
 export type SolanaQuoteExecutionPayload = {
-  transactionData: (SolanaTransactionData | string)[];
+  // The transaction data is an array of bs58 encoded versioned transaction
+  transactionData: string[];
 };
 
 export type QuoteExecutionPayload = EvmQuoteExecutionPayload | SolanaQuoteExecutionPayload;

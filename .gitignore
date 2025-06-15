@@ -35,3 +35,4 @@ coverage/
 .DS_Store
 
 src/test.ts
+tests/local-tests/*

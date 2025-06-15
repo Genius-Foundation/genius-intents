@@ -206,12 +206,7 @@ export class JupiterService implements IIntentProtocol {
             : priceResponse.slippage,
         priceImpact: priceResponse.priceImpact,
         executionPayload: {
-          transactionData: [
-            {
-              ...swapTransactionResponse.data,
-              transaction: swapTransactionResponse.data.swapTransaction,
-            },
-          ],
+          transactionData: [swapTransactionResponse.data.swapTransaction],
         },
         protocolResponse: { transactions: [] },
       };
