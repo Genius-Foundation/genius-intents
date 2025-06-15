@@ -1,3 +1,33 @@
+## [0.2.0] - 2025-06-15
+
+## [0.2.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.1.7...v0.2.0) (2025-06-15)
+
+
+### Features
+
+* always add approval info in quotes ([#12](https://github.com/Genius-Foundation/genius-intents/issues/12)) ([9efa105](https://github.com/Genius-Foundation/genius-intents/commit/9efa1054bf6051ede78bc4dfcc668d0d659934dc))
+* Enhance GitHub Actions workflows for beta and stable releases ([3bf9411](https://github.com/Genius-Foundation/genius-intents/commit/3bf9411803c305d62a8ef519e602955a44edb2fd))
+
+
+### Bug Fixes
+
+* adjust executionPayload structure for Solana network in fetchQuote method ([1fac0ce](https://github.com/Genius-Foundation/genius-intents/commit/1fac0cec8f21888a5c2eb2637212b4bd79b91a5f))
+* update beta release conditions and improve release notes formatting ([9588312](https://github.com/Genius-Foundation/genius-intents/commit/958831254256d6a5fbd39f48e4e24b5800cfadd8))
+* **jupiter, openocean:** updated solana quote response ([#16](https://github.com/Genius-Foundation/genius-intents/issues/16)) ([764126f](https://github.com/Genius-Foundation/genius-intents/commit/764126f62621165f782689465afd86fd494ee1b1))
+* update GitHub token secret in changelog generation step ([54238b0](https://github.com/Genius-Foundation/genius-intents/commit/54238b025ebfb506545b72a736daef4e3b915e61))
+
+
+### Code Refactoring
+
+* remove dependency on @metaplex-foundation/js and delete fetchSPLMetadata utility function ([38c82d3](https://github.com/Genius-Foundation/genius-intents/commit/38c82d36170bfa212ee5425d0992505e79e1a957))
+* simplify main PR validation workflow by removing release checks ([f1b0095](https://github.com/Genius-Foundation/genius-intents/commit/f1b00959dbae8820f73126ea3ea65e2eb172f887))
+* simplify ZeroX quote handling and update type definitions ([cea2b2d](https://github.com/Genius-Foundation/genius-intents/commit/cea2b2dfbc9d303104a42518557c28a36bb5640f))
+
+
+
+---
+
+
 
 
 ## [0.1.7] - 2025-06-12
