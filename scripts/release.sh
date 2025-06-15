@@ -71,33 +71,60 @@ npm run format:check
 npm run test
 npm run build:clean
 
-# Get current version for display
+# Get current version and calculate next version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${BLUE}📋 Current version: ${CURRENT_VERSION}${NC}"
+
+# Calculate next version based on release type
+if [[ "$RELEASE_TYPE" == "beta" ]]; then
+    NEXT_VERSION="${CURRENT_VERSION}-beta.$(date +%Y%m%d%H%M%S)"
+else
+    # Split version into components
+    IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+    MAJOR="${VERSION_PARTS[0]}"
+    MINOR="${VERSION_PARTS[1]}"
+    PATCH="${VERSION_PARTS[2]}"
+
+    # Calculate next version based on release type
+    case "$RELEASE_TYPE" in
+        "major")
+            NEXT_VERSION="$((MAJOR + 1)).0.0"
+            ;;
+        "minor")
+            NEXT_VERSION="${MAJOR}.$((MINOR + 1)).0"
+            ;;
+        "patch")
+            NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            ;;
+        *)
+            echo -e "${RED}❌ Error: Invalid release type: ${RELEASE_TYPE}${NC}"
+            exit 1
+            ;;
+    esac
+fi
+
+echo -e "${BLUE}📋 Next version will be: ${NEXT_VERSION}${NC}"
 
 # Determine workflow based on release type
 if [[ "$RELEASE_TYPE" == "beta" ]]; then
     # BETA RELEASE: Create release branch from develop
     echo -e "${BLUE}🧪 Preparing beta release...${NC}"
     
-    # Create a temporary commit to trigger version bump calculation
-    TEMP_COMMIT_MSG="chore: prepare beta release"
-    
-    # Create release branch from develop
-    RELEASE_BRANCH="release/beta-$(date +%Y%m%d-%H%M%S)"
+    # Create release branch with version number
+    RELEASE_BRANCH="release/v${NEXT_VERSION}"
     echo -e "${BLUE}🌿 Creating beta release branch: ${RELEASE_BRANCH}${NC}"
     git checkout -b $RELEASE_BRANCH
     
     # Create temporary commit to mark release intent
-    git commit --allow-empty -m "chore: bump version to beta"
+    git commit --allow-empty -m "chore: bump version to ${NEXT_VERSION}"
     
     # Push release branch
     echo -e "${BLUE}📤 Pushing beta release branch...${NC}"
     git push origin $RELEASE_BRANCH
     
     # Create PR to develop for beta
-    PR_TITLE="🧪 Beta Release"
-    PR_BODY="🧪 **Beta Release Preparation**
+    PR_TITLE="🧪 Beta Release v${NEXT_VERSION}"
+    PR_BODY="🧪 **Beta Release v${NEXT_VERSION}**
 
 This PR prepares a beta release from the develop branch.
 
@@ -154,21 +181,21 @@ else
     # Capitalize release type for display
     RELEASE_TYPE_CAPITALIZED="$(echo ${RELEASE_TYPE:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${RELEASE_TYPE:1})"
     
-    # Create release branch from develop
-    RELEASE_BRANCH="release/$(date +%Y%m%d-%H%M%S)"
+    # Create release branch with version number
+    RELEASE_BRANCH="release/v${NEXT_VERSION}"
     echo -e "${BLUE}🌿 Creating stable release branch: ${RELEASE_BRANCH}${NC}"
     git checkout -b $RELEASE_BRANCH
     
     # Create temporary commit to mark release intent
-    git commit --allow-empty -m "chore: bump version to ${RELEASE_TYPE}"
+    git commit --allow-empty -m "chore: bump version to ${NEXT_VERSION}"
     
     # Push release branch
     echo -e "${BLUE}📤 Pushing stable release branch...${NC}"
     git push origin $RELEASE_BRANCH
     
     # Create PR from release branch to main
-    PR_TITLE="🚀 ${RELEASE_TYPE_CAPITALIZED} Release"
-    PR_BODY="🚀 **${RELEASE_TYPE_CAPITALIZED} Release Preparation**
+    PR_TITLE="🚀 ${RELEASE_TYPE_CAPITALIZED} Release v${NEXT_VERSION}"
+    PR_BODY="🚀 **${RELEASE_TYPE_CAPITALIZED} Release v${NEXT_VERSION}**
 
 This PR contains a ${RELEASE_TYPE} release from the develop branch.
 
