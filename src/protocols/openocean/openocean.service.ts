@@ -11,6 +11,9 @@ import { isSolanaNetwork } from '../../utils/check-vm';
 import { OpenOceanConfig, OpenOceanPriceResponse, OpenOceanQuoteResponse } from './openocean.types';
 import { createErrorMessage } from '../../utils/create-error-message';
 import axios from 'axios';
+import bs58 from 'bs58';
+import { VersionedTransaction } from '@solana/web3.js';
+import { QuoteExecutionPayload } from '../../types/quote-execution-payload';
 
 let logger: ILogger;
 export class OpenOceanService implements IIntentProtocol {
@@ -170,6 +173,30 @@ export class OpenOceanService implements IIntentProtocol {
         estimatedGas: quoteData.estimatedGas,
       });
 
+      let executionPayload: QuoteExecutionPayload = {
+        transactionData: {
+          data: quoteData.data,
+          to: quoteData.to,
+          value: quoteData.value,
+          gasEstimate: quoteData.estimatedGas.toString(),
+          gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
+        },
+        approval: {
+          token: tokenIn,
+          amount: amountIn,
+          spender: quoteData.to,
+        },
+      };
+
+      if (isSolanaNetwork(networkIn) && quoteData.data) {
+        const swapTransaction = bs58.encode(
+          VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
+        );
+        executionPayload = {
+          transactionData: [swapTransaction],
+        };
+      }
+
       return {
         protocol: this.protocol,
         tokenIn: tokenIn,
@@ -178,20 +205,7 @@ export class OpenOceanService implements IIntentProtocol {
         amountOut: quoteData.outAmount,
         from,
         receiver: receiver || from,
-        executionPayload: {
-          transactionData: {
-            data: quoteData.data,
-            to: quoteData.to,
-            value: quoteData.value,
-            gasEstimate: quoteData.estimatedGas.toString(),
-            gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
-          },
-          approval: {
-            token: tokenIn,
-            amount: amountIn,
-            spender: quoteData.to,
-          },
-        },
+        executionPayload,
         slippage,
         networkIn,
         networkOut,

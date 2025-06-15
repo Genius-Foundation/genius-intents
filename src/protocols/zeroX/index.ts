@@ -14,7 +14,6 @@ export type {
   ZeroXTokenTaxInfo,
   ZeroXTokenMetadata,
   ZeroXTransaction,
-  ZeroXSwapQuoteResponse,
   ZeroXPriceResponse,
   ZeroXQuoteResponse,
   ZeroXMultiPriceParams,
