@@ -15,7 +15,6 @@ import {
   JupiterConfig,
   JupiterPriceResponse,
   JupiterPriceUrlParams,
-  JupiterSwapUrlParams,
   JupiterTransactionData,
 } from './jupiter.types';
 import { VersionedTransaction } from '@solana/web3.js';
@@ -29,22 +28,12 @@ export class JupiterService implements IIntentProtocol {
   public readonly singleChain = true;
   public readonly multiChain = false;
 
-  protected readonly priceParamOverrides: Partial<JupiterPriceUrlParams> = {
-    restrictIntermediateTokens: true,
-    onlyDirectRoutes: false,
-    // dynamicSlippage: true,
-  };
-  protected readonly quoteParamOverrides: Partial<JupiterSwapUrlParams> = {
-    wrapAndUnwrapSol: true,
-    dynamicComputeUnitLimit: true,
-    dynamicSlippage: true,
-    skipUserAccountsRpcCalls: false,
-  };
   public readonly priceEndpoint: string = '/quote';
   public readonly quoteEndpoint: string = '/swap-instructions';
   public readonly assemblyEndpoint: string = '/swap';
 
   public baseUrl: string;
+  public maxAccounts: number;
 
   constructor(config?: IntentsSDKConfig & JupiterConfig) {
     if (config?.debug) {
@@ -58,6 +47,7 @@ export class JupiterService implements IIntentProtocol {
 
     // Jupiter API endpoint
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
+    this.maxAccounts = config?.jupiterMaxAccounts || 16;
   }
 
   isCorrectConfig<T extends { [key: string]: string }>(_config: {
@@ -82,22 +72,10 @@ export class JupiterService implements IIntentProtocol {
         from: params.from,
       });
 
-      // Apply price parameter overrides
-      const finalParams = {
-        ...requestParams,
-        ...this.priceParamOverrides,
-      };
-      if (finalParams.dynamicSlippage) {
-        delete finalParams.slippageBps;
-      }
-
-      const urlParams = new URLSearchParams(finalParams as unknown as Record<string, string>);
-
-      const endpoint = `${this.baseUrl}${this.priceEndpoint}?${urlParams.toString()}`;
-
-      logger.debug(`Making Jupiter API price request to: ${endpoint}`);
-
-      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(endpoint);
+      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
+        `${this.baseUrl}${this.priceEndpoint}`,
+        { params: requestParams },
+      );
 
       const priceData = response.data;
 
@@ -156,7 +134,6 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
-        ...this.quoteParamOverrides,
       };
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
@@ -171,23 +148,6 @@ export class JupiterService implements IIntentProtocol {
         ).serialize(),
       );
 
-      if (
-        this.quoteParamOverrides.dynamicSlippage &&
-        !swapTransactionResponse?.data?.dynamicSlippageReport
-      ) {
-        throw new Error('Dynamic slippage report is not available');
-      }
-      //@ts-ignore // will never be undefined if dynamic slippage is enabled
-      if (
-        this.quoteParamOverrides.dynamicSlippage &&
-        swapTransactionResponse.data.dynamicSlippageReport &&
-        swapTransactionResponse.data.dynamicSlippageReport.slippageBps > params.slippage * 100
-      ) {
-        throw new Error(
-          `Dynamic slippage is higher than expected. Reported: ${swapTransactionResponse?.data?.dynamicSlippageReport?.slippageBps}bps, Max Tolerance: ${params.slippage * 100}bps`,
-        );
-      }
-
       const quoteResponse: QuoteResponse = {
         protocol: ProtocolEnum.JUPITER,
         networkIn: params.networkIn,
@@ -198,12 +158,7 @@ export class JupiterService implements IIntentProtocol {
         amountOut: priceResponse.amountOut,
         from,
         receiver: receiver || from,
-        //@ts-ignore // will never be undefined if dynamic slippage is enabled
-        slippage:
-          this.quoteParamOverrides.dynamicSlippage &&
-          swapTransactionResponse?.data?.dynamicSlippageReport?.slippageBps
-            ? swapTransactionResponse?.data?.dynamicSlippageReport?.slippageBps / 100
-            : priceResponse.slippage,
+        slippage: priceResponse.slippage,
         priceImpact: priceResponse.priceImpact,
         executionPayload: {
           transactionData: [swapTransactionResponse.data.swapTransaction],
