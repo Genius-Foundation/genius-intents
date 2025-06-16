@@ -1,3 +1,22 @@
+## [0.2.1] - 2025-06-16
+
+### [0.2.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.2.0...v0.2.1) (2025-06-16)
+
+
+### Bug Fixes
+
+* jupiter class slippage ([e503493](https://github.com/Genius-Foundation/genius-intents/commit/e5034932a30b777a9b4040dee4cec0d6172b9625))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.2.0 ([f99116e](https://github.com/Genius-Foundation/genius-intents/commit/f99116e7a6409c33879f98de915fdcd6f6434cc0))
+
+
+
+---
+
+
 ## [0.2.0] - 2025-06-15
 
 ## [0.2.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.1.7...v0.2.0) (2025-06-15)
