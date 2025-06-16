@@ -1,5 +1,6 @@
 export type JupiterConfig = {
   jupiterPrivateUrl?: string;
+  jupiterMaxAccounts?: number;
 };
 
 export type JupiterSwapPlatformFee = {
