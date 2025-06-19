@@ -6,7 +6,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { formatAddress } from '../../utils/address';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { ZERO_ADDRESS } from '../../utils/constants';
@@ -59,7 +59,7 @@ export class OkxService implements IIntentProtocol {
     [ChainIdEnum.SONIC]: '0xd321ab5589d3e8fa5df985ccfef625022e2dd910',
   };
 
-  constructor(config: IntentsSDKConfig & OKXConfig) {
+  constructor(config: GeniusIntentsSDKConfig & OKXConfig) {
     const { okxApiKey, okxSecretKey, okxPassphrase, okxProjectId } = config;
     if (!okxSecretKey || !okxApiKey || !okxPassphrase || !okxProjectId) {
       throw sdkError(
@@ -232,7 +232,7 @@ export class OkxService implements IIntentProtocol {
         amountOut: okxQuoteResponse.data[0].routerResult.toTokenAmount,
         from,
         receiver: receiver || from,
-        executionPayload: {
+        evmExecutionPayload: {
           transactionData: {
             data: okxQuoteResponse?.data?.[0].tx.data,
             to: okxQuoteResponse?.data?.[0].tx.to,

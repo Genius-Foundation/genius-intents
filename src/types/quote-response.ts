@@ -3,7 +3,7 @@ import { PumpFunQuoteResponse } from '../protocols/pumpfun/pumpfun.types';
 import { RaydiumV2QuoteResponse } from '../protocols/raydium/raydium-v2.types';
 import { JupiterQuoteResponses } from '../protocols/jupiter/jupiter.types';
 import { ProtocolEnum } from './enums';
-import { QuoteExecutionPayload } from './quote-execution-payload';
+import { EvmQuoteExecutionPayload, SvmQuoteExecutionPayload } from './quote-execution-payload';
 import { OkxQuoteResponse } from '../protocols/okx/okx.types';
 import { AftermathQuoteResponse } from '../protocols/aftermath/aftermath.types';
 import { OpenOceanQuoteResponse } from '../protocols/openocean/openocean.types';
@@ -25,7 +25,8 @@ export type QuoteResponse = {
   priceImpact?: number;
   from: string;
   receiver: string;
-  executionPayload: QuoteExecutionPayload;
+  evmExecutionPayload?: EvmQuoteExecutionPayload;
+  svmExecutionPayload?: SvmQuoteExecutionPayload;
   protocolResponse: RawProtocolQuoteResponse;
 };
 

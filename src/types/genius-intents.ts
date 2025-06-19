@@ -1,7 +1,7 @@
 import { PriceResponse } from './price-response';
 import { QuoteResponse } from './quote-response';
 import { ProtocolEnum } from './enums';
-import { IntentsSDKConfig } from './sdk-config';
+import { GeniusIntentsSDKConfig } from './sdk-config';
 import { OKXConfig } from '../protocols/okx/okx.types';
 import { JupiterConfig } from '../protocols/jupiter/jupiter.types';
 import { RaydiumSdkConfig } from '../protocols/raydium/raydium-v2.types';
@@ -16,8 +16,8 @@ import { PumpFunConfig } from '../protocols/pumpfun/pumpfun.types';
 /**
  * Configuration interface for IntentsProtocols class
  */
-export type IntentsProtocolsConfig = OptionalIntentsProtocolsConfig &
-  IntentsSDKConfig & {
+export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
+  GeniusIntentsSDKConfig & {
     /**
      * Execution method for price and quote operations
      * - 'race': Return the fastest response using Promise.race()
@@ -31,9 +31,21 @@ export type IntentsProtocolsConfig = OptionalIntentsProtocolsConfig &
     timeout?: number;
 
     /**
+     * RCPs to use for the protocols & approval checks
+     */
+    rcps?: { [network: number]: string };
+
+    /**
      * Maximum number of concurrent protocol requests
      */
     maxConcurrency?: number;
+
+    /**
+     * When fetching a quote, it will be checked if the sender needs to execute an approval and
+     * the quote will be returned with the approval tx data if approval required
+     * @requires rpcs to be provided in the config
+     */
+    checkApprovals?: boolean;
 
     /**
      * Specific protocols to include (if not specified, all compatible protocols will be used)
@@ -82,7 +94,7 @@ export type IntentQuoteResult = {
 /**
  * Combined results interface for IntentsProtocols operations
  */
-export type IntentsProtocolsResults<T> = {
+export type GeniusIntentsResults<T> = {
   /**
    * The selected best result (for 'best' method) or fastest result (for 'race' method)
    */

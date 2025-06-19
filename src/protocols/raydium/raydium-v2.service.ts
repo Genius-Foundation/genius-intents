@@ -16,7 +16,7 @@ import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import axios from 'axios';
 import { API_URLS, parseTokenAccountResp } from '@raydium-io/raydium-sdk-v2';
 import { convertBase64ToBase58 } from '../../utils/base64-to-base58';
@@ -34,7 +34,7 @@ export class RaydiumV2Service implements IIntentProtocol {
 
   protected readonly connection: Connection | undefined;
 
-  constructor(config: IntentsSDKConfig & RaydiumSdkConfig) {
+  constructor(config: GeniusIntentsSDKConfig & RaydiumSdkConfig) {
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -211,9 +211,7 @@ export class RaydiumV2Service implements IIntentProtocol {
         networkOut: ChainIdEnum.SOLANA,
         slippage: priceResponse.slippage,
         protocolResponse: raydiumQuoteResponse,
-        executionPayload: {
-          transactionData: [encodedTransaction],
-        },
+        svmExecutionPayload: [encodedTransaction],
       };
     } catch (error) {
       const { errorMessage, errorMessageError } = createErrorMessage(error);
