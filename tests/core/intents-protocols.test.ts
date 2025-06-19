@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
-import { IntentsProtocols } from '../../src/intents-protocols';
+import { GeniusIntents } from '../../src/genius-intents';
 import { ChainIdEnum, ProtocolEnum } from '../../src/types/enums';
-import { IntentsProtocolsConfig } from '../../src/types/intents-protocols';
+import { GeniusIntentsConfig } from '../../src/types/genius-intents';
 import { createPriceParams, createQuoteParams } from '../fixtures/test-data';
 
 // Mock all protocol services to prevent actual network calls
@@ -17,8 +17,8 @@ jest.mock('../../src/protocols/zeroX/zeroX.service');
 jest.mock('../../src/protocols/debridge/debridge.service');
 jest.mock('../../src/protocols/genius-bridge/genius-bridge.service');
 
-describe('IntentsProtocols', () => {
-  let intentsProtocols: IntentsProtocols;
+describe('GeniusIntents', () => {
+  let geniusIntents: GeniusIntents;
   let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
   let consoleInfoSpy: jest.SpiedFunction<typeof console.info>;
   let consoleDebugSpy: jest.SpiedFunction<typeof console.debug>;
@@ -40,34 +40,34 @@ describe('IntentsProtocols', () => {
 
   describe('Constructor and Initialization', () => {
     test('should initialize with default configuration', () => {
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
       
-      expect(intentsProtocols).toBeDefined();
-      expect(typeof intentsProtocols.getInitializedProtocols).toBe('function');
-      expect(typeof intentsProtocols.fetchPrice).toBe('function');
-      expect(typeof intentsProtocols.fetchQuote).toBe('function');
+      expect(geniusIntents).toBeDefined();
+      expect(typeof geniusIntents.getInitializedProtocols).toBe('function');
+      expect(typeof geniusIntents.fetchPrice).toBe('function');
+      expect(typeof geniusIntents.fetchQuote).toBe('function');
     });
 
     test('should initialize with custom configuration', () => {
-      const config: IntentsProtocolsConfig = {
+      const config: GeniusIntentsConfig = {
         method: 'race',
         timeout: 20000,
         maxConcurrency: 5,
         debug: true,
       };
 
-      intentsProtocols = new IntentsProtocols(config);
+      geniusIntents = new GeniusIntents(config);
       
-      expect(intentsProtocols).toBeDefined();
+      expect(geniusIntents).toBeDefined();
     });
 
     test('should respect includeProtocols configuration', () => {
-      const config: IntentsProtocolsConfig = {
+      const config: GeniusIntentsConfig = {
         includeProtocols: [ProtocolEnum.JUPITER],
       };
 
-      intentsProtocols = new IntentsProtocols(config);
-      const initializedProtocols = intentsProtocols.getInitializedProtocols();
+      geniusIntents = new GeniusIntents(config);
+      const initializedProtocols = geniusIntents.getInitializedProtocols();
       
       // Should only include Jupiter if it's available, or be empty if not
       expect(initializedProtocols.length).toBeLessThanOrEqual(1);
@@ -77,33 +77,33 @@ describe('IntentsProtocols', () => {
     });
 
     test('should respect excludeProtocols configuration', () => {
-      const config: IntentsProtocolsConfig = {
+      const config: GeniusIntentsConfig = {
         excludeProtocols: [ProtocolEnum.ODOS],
       };
 
-      intentsProtocols = new IntentsProtocols(config);
-      const initializedProtocols = intentsProtocols.getInitializedProtocols();
+      geniusIntents = new GeniusIntents(config);
+      const initializedProtocols = geniusIntents.getInitializedProtocols();
       
       expect(initializedProtocols).not.toContain(ProtocolEnum.ODOS);
     });
 
     test('should handle protocol initialization gracefully', () => {
       // This test verifies that the class doesn't crash when protocols fail to initialize
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
       
       // The class should still be functional even if some protocols fail
-      expect(intentsProtocols).toBeDefined();
-      expect(typeof intentsProtocols.getInitializedProtocols).toBe('function');
+      expect(geniusIntents).toBeDefined();
+      expect(typeof geniusIntents.getInitializedProtocols).toBe('function');
     });
   });
 
   describe('Protocol Management', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
     });
 
     test('should return list of initialized protocols', () => {
-      const protocols = intentsProtocols.getInitializedProtocols();
+      const protocols = geniusIntents.getInitializedProtocols();
       
       expect(Array.isArray(protocols)).toBe(true);
       protocols.forEach(protocol => {
@@ -112,11 +112,11 @@ describe('IntentsProtocols', () => {
     });
 
     test('should get specific protocol instance', () => {
-      const protocols = intentsProtocols.getInitializedProtocols();
+      const protocols = geniusIntents.getInitializedProtocols();
       
       if (protocols.length > 0) {
         const firstProtocol = protocols[0]!;
-        const protocol = intentsProtocols.getProtocol(firstProtocol);
+        const protocol = geniusIntents.getProtocol(firstProtocol);
         
         // Protocol might be undefined due to mocking, which is expected
         if (protocol && protocol.protocol) {
@@ -132,7 +132,7 @@ describe('IntentsProtocols', () => {
     });
 
     test('should return undefined for non-existent protocol', () => {
-      const protocol = intentsProtocols.getProtocol('NON_EXISTENT' as ProtocolEnum);
+      const protocol = geniusIntents.getProtocol('NON_EXISTENT' as ProtocolEnum);
       
       expect(protocol).toBeUndefined();
     });
@@ -140,7 +140,7 @@ describe('IntentsProtocols', () => {
 
   describe('Compatible Protocol Selection', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
     });
 
     test('should find compatible protocols for same-chain swap', () => {
@@ -151,7 +151,7 @@ describe('IntentsProtocols', () => {
 
       // Access the protected method through reflection
       try {
-        const compatibleProtocols = (intentsProtocols as any).getCompatibleProtocols(params);
+        const compatibleProtocols = (geniusIntents as any).getCompatibleProtocols(params);
         
         expect(Array.isArray(compatibleProtocols)).toBe(true);
         compatibleProtocols.forEach((protocol: any) => {
@@ -173,7 +173,7 @@ describe('IntentsProtocols', () => {
       });
 
       try {
-        const compatibleProtocols = (intentsProtocols as any).getCompatibleProtocols(params);
+        const compatibleProtocols = (geniusIntents as any).getCompatibleProtocols(params);
         
         expect(Array.isArray(compatibleProtocols)).toBe(true);
         compatibleProtocols.forEach((protocol: any) => {
@@ -196,7 +196,7 @@ describe('IntentsProtocols', () => {
       });
 
       try {
-        const compatibleProtocols = (intentsProtocols as any).getCompatibleProtocols(params);
+        const compatibleProtocols = (geniusIntents as any).getCompatibleProtocols(params);
         expect(compatibleProtocols).toHaveLength(0);
       } catch (error) {
         // Expected when protocols are not properly mocked
@@ -207,7 +207,7 @@ describe('IntentsProtocols', () => {
 
   describe('Price Fetching', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols({ method: 'best' });
+      geniusIntents = new GeniusIntents({ method: 'best' });
     });
 
     test('should handle price fetching with no compatible protocols', async () => {
@@ -216,12 +216,12 @@ describe('IntentsProtocols', () => {
         networkOut: 998 as ChainIdEnum,
       });
 
-      await expect(intentsProtocols.fetchPrice(params)).rejects.toThrow();
+      await expect(geniusIntents.fetchPrice(params)).rejects.toThrow();
     });
 
     test('should handle price fetching method configuration', () => {
-      const bestModeInstance = new IntentsProtocols({ method: 'best' });
-      const raceModeInstance = new IntentsProtocols({ method: 'race' });
+      const bestModeInstance = new GeniusIntents({ method: 'best' });
+      const raceModeInstance = new GeniusIntents({ method: 'race' });
       
       expect(bestModeInstance).toBeDefined();
       expect(raceModeInstance).toBeDefined();
@@ -230,7 +230,7 @@ describe('IntentsProtocols', () => {
 
   describe('Quote Fetching', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols({ method: 'best' });
+      geniusIntents = new GeniusIntents({ method: 'best' });
     });
 
     test('should handle quote fetching with no compatible protocols', async () => {
@@ -239,31 +239,31 @@ describe('IntentsProtocols', () => {
         networkOut: 998 as ChainIdEnum,
       });
 
-      await expect(intentsProtocols.fetchQuote(params)).rejects.toThrow();
+      await expect(geniusIntents.fetchQuote(params)).rejects.toThrow();
     });
   });
 
   describe('Configuration Updates', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
     });
 
     test('should update configuration', () => {
-      const newConfig: Partial<IntentsProtocolsConfig> = {
+      const newConfig: Partial<GeniusIntentsConfig> = {
         method: 'race',
         timeout: 15000,
       };
 
-      expect(() => intentsProtocols.updateConfig(newConfig)).not.toThrow();
+      expect(() => geniusIntents.updateConfig(newConfig)).not.toThrow();
     });
 
     test('should reinitialize protocols when protocol configs change', () => {
-      const newConfig: Partial<IntentsProtocolsConfig> = {
+      const newConfig: Partial<GeniusIntentsConfig> = {
         includeProtocols: [ProtocolEnum.JUPITER],
       };
 
-      intentsProtocols.updateConfig(newConfig);
-      const updatedProtocols = intentsProtocols.getInitializedProtocols();
+      geniusIntents.updateConfig(newConfig);
+      const updatedProtocols = geniusIntents.getInitializedProtocols();
       
       // The protocols should be reinitialized
       expect(Array.isArray(updatedProtocols)).toBe(true);
@@ -273,11 +273,11 @@ describe('IntentsProtocols', () => {
 
   describe('Error Handling', () => {
     beforeEach(() => {
-      intentsProtocols = new IntentsProtocols();
+      geniusIntents = new GeniusIntents();
     });
 
     test('should handle protocol service creation errors', () => {
-      const createProtocolSafely = (intentsProtocols as any).createProtocolSafely;
+      const createProtocolSafely = (geniusIntents as any).createProtocolSafely;
       
       const failingFactory = () => {
         throw new Error('Service creation failed');
@@ -299,7 +299,7 @@ describe('IntentsProtocols', () => {
         from: '',
       } as any;
 
-      await expect(intentsProtocols.fetchPrice(invalidParams)).rejects.toThrow();
+      await expect(geniusIntents.fetchPrice(invalidParams)).rejects.toThrow();
     });
   });
 
@@ -323,7 +323,7 @@ describe('IntentsProtocols', () => {
         },
       ];
 
-      const bestResponse = (intentsProtocols as any).selectBestPriceResponse(results);
+      const bestResponse = (geniusIntents as any).selectBestPriceResponse(results);
       
       expect(bestResponse).toBeDefined();
       expect(bestResponse.amountOut).toBe('1900000000');
@@ -338,7 +338,7 @@ describe('IntentsProtocols', () => {
         },
       ];
 
-      const bestResponse = (intentsProtocols as any).selectBestPriceResponse(results);
+      const bestResponse = (geniusIntents as any).selectBestPriceResponse(results);
       
       expect(bestResponse).toBeUndefined();
     });
@@ -346,20 +346,20 @@ describe('IntentsProtocols', () => {
 
   describe('Timeout and Concurrency', () => {
     test('should respect timeout configuration', () => {
-      const config: IntentsProtocolsConfig = {
+      const config: GeniusIntentsConfig = {
         timeout: 5000,
       };
 
-      const instance = new IntentsProtocols(config);
+      const instance = new GeniusIntents(config);
       expect(instance).toBeDefined();
     });
 
     test('should respect maxConcurrency configuration', () => {
-      const config: IntentsProtocolsConfig = {
+      const config: GeniusIntentsConfig = {
         maxConcurrency: 3,
       };
 
-      const instance = new IntentsProtocols(config);
+      const instance = new GeniusIntents(config);
       expect(instance).toBeDefined();
     });
   });

@@ -14,7 +14,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { SOL_NATIVE_ADDRESS } from '../../utils/constants';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
@@ -53,7 +53,7 @@ export class PumpFunService implements IIntentProtocol {
   protected readonly connection: Connection;
   protected sdk: PumpFunSDK;
 
-  constructor(config: IntentsSDKConfig & PumpFunConfig) {
+  constructor(config: GeniusIntentsSDKConfig & PumpFunConfig) {
     // Configure logging
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -265,9 +265,7 @@ export class PumpFunService implements IIntentProtocol {
         from,
         receiver: receiver || from,
         slippage: params.slippage,
-        executionPayload: {
-          transactionData: [encodedTransaction],
-        },
+        svmExecutionPayload: [encodedTransaction],
         protocolResponse: pumpFunQuoteResponse,
       };
     } catch (error) {

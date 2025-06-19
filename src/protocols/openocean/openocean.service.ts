@@ -4,7 +4,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { isSolanaNetwork } from '../../utils/check-vm';
@@ -13,7 +13,10 @@ import { createErrorMessage } from '../../utils/create-error-message';
 import axios from 'axios';
 import bs58 from 'bs58';
 import { VersionedTransaction } from '@solana/web3.js';
-import { QuoteExecutionPayload } from '../../types/quote-execution-payload';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from '../../types/quote-execution-payload';
 
 let logger: ILogger;
 export class OpenOceanService implements IIntentProtocol {
@@ -41,7 +44,7 @@ export class OpenOceanService implements IIntentProtocol {
   protected readonly disabledDexIds?: string;
   protected readonly enabledDexIds?: string;
 
-  constructor(config?: IntentsSDKConfig & OpenOceanConfig) {
+  constructor(config?: GeniusIntentsSDKConfig & OpenOceanConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -173,7 +176,7 @@ export class OpenOceanService implements IIntentProtocol {
         estimatedGas: quoteData.estimatedGas,
       });
 
-      let executionPayload: QuoteExecutionPayload = {
+      const evmExecutionPayload: EvmQuoteExecutionPayload = {
         transactionData: {
           data: quoteData.data,
           to: quoteData.to,
@@ -187,14 +190,13 @@ export class OpenOceanService implements IIntentProtocol {
           spender: quoteData.to,
         },
       };
+      let solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = undefined;
 
       if (isSolanaNetwork(networkIn) && quoteData.data) {
         const swapTransaction = bs58.encode(
           VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
         );
-        executionPayload = {
-          transactionData: [swapTransaction],
-        };
+        solanaExecutionPayload = [swapTransaction];
       }
 
       return {
@@ -205,7 +207,8 @@ export class OpenOceanService implements IIntentProtocol {
         amountOut: quoteData.outAmount,
         from,
         receiver: receiver || from,
-        executionPayload,
+        evmExecutionPayload: solanaExecutionPayload ? undefined : evmExecutionPayload,
+        svmExecutionPayload: solanaExecutionPayload,
         slippage,
         networkIn,
         networkOut,

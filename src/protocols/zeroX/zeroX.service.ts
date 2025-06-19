@@ -5,7 +5,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse, RawProtocolQuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { formatAddress } from '../../utils/address';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { NATIVE_ADDRESS } from '../../utils/constants';
@@ -32,7 +32,7 @@ export class ZeroXService implements IIntentProtocol {
   baseUrl = 'https://api.0x.org/swap/allowance-holder/quote';
   public readonly apiKey: string;
 
-  constructor(config?: IntentsSDKConfig & ZeroXConfig) {
+  constructor(config?: GeniusIntentsSDKConfig & ZeroXConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -167,7 +167,7 @@ export class ZeroXService implements IIntentProtocol {
         amountOut: zeroXQuoteResponse.buyAmount,
         from: params.from,
         receiver: params.from,
-        executionPayload: {
+        evmExecutionPayload: {
           transactionData: {
             data: zeroXQuoteResponse.transaction.data,
             to: zeroXQuoteResponse.transaction.to,

@@ -13,7 +13,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { isEVMNetwork, isSolanaNetwork } from '../../utils/check-vm';
@@ -21,7 +21,10 @@ import { createErrorMessage } from '../../utils/create-error-message';
 import { validateSolanaAddress } from '../../utils/address';
 import { validateAndChecksumEvmAddress } from '../../utils/address-validation';
 import { NATIVE_ADDRESS, ZERO_ADDRESS } from '../../utils/constants';
-import { QuoteExecutionPayload } from '../../types/quote-execution-payload';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from '../../types/quote-execution-payload';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 
 let logger: ILogger;
@@ -94,11 +97,11 @@ export class DeBridgeService implements IIntentProtocol {
   /**
    * Creates a new instance of the DeBridgeService.
    *
-   * @param {IntentsSDKConfig & DeBridgeConfig} config - Configuration parameters for the service.
+   * @param {GeniusIntentsSDKConfig & DeBridgeConfig} config - Configuration parameters for the service.
    *
    * @throws {SdkError} If no RPC URLs are provided for the supported blockchains.
    */
-  constructor(config?: IntentsSDKConfig & DeBridgeConfig) {
+  constructor(config?: GeniusIntentsSDKConfig & DeBridgeConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -206,8 +209,8 @@ export class DeBridgeService implements IIntentProtocol {
       }
 
       const isSourceSolana = isSolanaNetwork(params.networkIn);
-      const executionPayload: QuoteExecutionPayload = isSourceSolana
-        ? { transactionData: [await this.formatSolanaTransaction(dlnQuote.tx.data)] }
+      const evmExecutionPayload: EvmQuoteExecutionPayload | undefined = isSourceSolana
+        ? undefined
         : {
             transactionData: {
               data: dlnQuote.tx.data,
@@ -215,11 +218,15 @@ export class DeBridgeService implements IIntentProtocol {
               value: dlnQuote.tx.value || '0',
             },
             approval: {
-              spender: dlnQuote.tx.to || '',
+              spender: dlnQuote.tx.allowanceTarget || '',
               amount: dlnQuote.tx.allowanceValue || '',
               token: params.tokenIn,
             },
           };
+
+      const solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = isSourceSolana
+        ? [await this.formatSolanaTransaction(dlnQuote.tx.data)]
+        : undefined;
 
       const response: QuoteResponse = {
         protocol: this.protocol,
@@ -232,7 +239,8 @@ export class DeBridgeService implements IIntentProtocol {
         slippage: params.slippage,
         from: params.from,
         receiver: params.receiver || params.from,
-        executionPayload,
+        evmExecutionPayload,
+        svmExecutionPayload: solanaExecutionPayload,
         protocolResponse: dlnQuote,
       };
 

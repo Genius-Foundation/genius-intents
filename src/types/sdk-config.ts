@@ -1,6 +1,6 @@
 import { ILogger } from '../utils/logger';
 
-export type IntentsSDKConfig = {
+export type GeniusIntentsSDKConfig = {
   logger?: ILogger;
   debug?: boolean;
 };

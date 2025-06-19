@@ -5,7 +5,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { isNative } from '../../utils/is-native';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
@@ -19,11 +19,11 @@ import { NATIVE_ADDRESS } from '../../utils/constants';
 import {
   GeniusBridgePriceResponse,
   GeniusBridgeQuoteResponse,
-  EvmArbitraryCall,
   GeniusBridgePriceParams,
   GeniusBridgeQuoteParams,
 } from './genius-bridge.types';
 import axios from 'axios';
+import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
 
 let logger: ILogger;
 
@@ -47,7 +47,7 @@ export class GeniusBridgeService implements IIntentProtocol {
   public readonly quoteEndpoint: string;
 
   constructor(
-    config?: IntentsSDKConfig & {
+    config?: GeniusIntentsSDKConfig & {
       geniusBridgeBaseUrl?: string;
       geniusBridgePriceEndpoint?: string;
       geniusBridgeQuoteEndpoint?: string;
@@ -141,6 +141,8 @@ export class GeniusBridgeService implements IIntentProtocol {
         token: response.tokenIn,
         amount: response.amountIn,
         spender: response.evmExecutionPayload?.to || '',
+        txnData: response.approvalRequired ? response.approvalRequired.payload : undefined,
+        required: !!response.approvalRequired,
       };
 
       logger.debug('Successfully received quote info from GeniusBridge', {
@@ -149,17 +151,18 @@ export class GeniusBridgeService implements IIntentProtocol {
         fee: response.fee,
       });
 
-      let evmTransactionData: EvmArbitraryCall | undefined = undefined;
+      let evmQuoteExecutionPayload: EvmQuoteExecutionPayload | undefined = undefined;
       let svmTransactionData: string[] | undefined = undefined;
 
       if (response.evmExecutionPayload) {
-        evmTransactionData = {
-          from: params.from,
-          to: response.evmExecutionPayload?.to || '',
-          data: response.evmExecutionPayload?.data || '',
-          value: response.evmExecutionPayload?.value || '0',
-          gasPrice: response.evmExecutionPayload?.gasPrice || '0',
-          gasLimit: response.evmExecutionPayload?.gasLimit || '0',
+        evmQuoteExecutionPayload = {
+          transactionData: {
+            to: response.evmExecutionPayload?.to || '',
+            data: response.evmExecutionPayload?.data || '',
+            value: response.evmExecutionPayload?.value || '0',
+            gasLimit: response.evmExecutionPayload?.gasLimit || '0',
+          },
+          approval,
         };
       }
 
@@ -167,7 +170,7 @@ export class GeniusBridgeService implements IIntentProtocol {
         svmTransactionData = response.svmExecutionPayload || [];
       }
 
-      if ((!svmTransactionData || !svmTransactionData.length) && !evmTransactionData) {
+      if ((!svmTransactionData || !svmTransactionData.length) && !evmQuoteExecutionPayload) {
         logger.error('GeniusBridge execution payload is missing');
         throw sdkError(
           SdkErrorEnum.QUOTE_NOT_FOUND,
@@ -187,12 +190,8 @@ export class GeniusBridgeService implements IIntentProtocol {
         priceImpact: undefined, // GeniusBridge doesn't provide price impact
         from: params.from,
         receiver: params.receiver || params.from,
-        executionPayload: evmTransactionData
-          ? {
-              transactionData: evmTransactionData,
-              approval,
-            }
-          : { transactionData: svmTransactionData || [] },
+        evmExecutionPayload: evmQuoteExecutionPayload,
+        svmExecutionPayload: svmTransactionData,
         protocolResponse: response,
       };
     } catch (error) {

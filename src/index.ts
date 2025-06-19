@@ -17,19 +17,18 @@ import { IntentPriceParams } from './types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from './types/price-response';
 import { IntentQuoteParams } from './types/quote-params';
 import { QuoteResponse, RawProtocolQuoteResponse } from './types/quote-response';
-import { IntentsSDKConfig } from './types/sdk-config';
-import { IntentsProtocols } from './intents-protocols';
+import { GeniusIntentsSDKConfig } from './types/sdk-config';
+import { GeniusIntents } from './genius-intents';
 import {
-  IntentsProtocolsConfig,
-  IntentsProtocolsResults,
+  GeniusIntentsConfig,
+  GeniusIntentsResults,
   IntentPriceResult,
   IntentQuoteResult,
-} from './types/intents-protocols';
+} from './types/genius-intents';
 import { IIntentProtocol } from './interfaces/intent-protocol';
 import {
-  QuoteExecutionPayload,
   EvmQuoteExecutionPayload,
-  SolanaQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
 } from './types/quote-execution-payload';
 import { EvmTransactionData } from './types/evm-transaction-data';
 import { SolanaTransactionData } from './types/solana-transaction-data';
@@ -38,14 +37,15 @@ import { ILogger, LogLevelEnum, LoggerFactory, ConsoleLogger, NoOpLogger } from 
 
 export {
   // Main IntentsProtocols class - the primary entrypoint
-  IntentsProtocols,
+  GeniusIntents,
 
   // Configuration types
-  IntentsProtocolsConfig,
-  IntentsSDKConfig,
+  GeniusIntentsConfig as IntentsProtocolsConfig,
+  GeniusIntentsConfig,
+  GeniusIntentsSDKConfig,
 
   // Results and response types
-  IntentsProtocolsResults,
+  GeniusIntentsResults,
   IntentPriceResult,
   IntentQuoteResult,
   PriceResponse,
@@ -58,9 +58,8 @@ export {
   IntentQuoteParams,
 
   // Transaction and execution types
-  QuoteExecutionPayload,
   EvmQuoteExecutionPayload,
-  SolanaQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
   EvmTransactionData,
   SolanaTransactionData,
   Erc20Approval,
