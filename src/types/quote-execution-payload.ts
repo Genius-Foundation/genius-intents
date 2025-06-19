@@ -6,9 +6,4 @@ export type EvmQuoteExecutionPayload = {
   approval: Erc20Approval;
 };
 
-export type SolanaQuoteExecutionPayload = {
-  // The transaction data is an array of bs58 encoded versioned transaction
-  transactionData: string[];
-};
-
-export type QuoteExecutionPayload = EvmQuoteExecutionPayload | SolanaQuoteExecutionPayload;
+export type SvmQuoteExecutionPayload = string[];

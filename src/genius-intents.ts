@@ -7,13 +7,13 @@ import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from './types/enums';
 import { ILogger, LoggerFactory, LogLevelEnum } from './utils/logger';
 import { sdkError } from './utils/throw-error';
 import {
-  IntentsProtocolsConfig,
+  GeniusIntentsConfig,
   IntentPriceResult,
   IntentQuoteResult,
-  IntentsProtocolsResults,
+  GeniusIntentsResults,
   IntentRaceExecutionResult,
-} from './types/intents-protocols';
-import { IntentsSDKConfig } from './types/sdk-config';
+} from './types/genius-intents';
+import { GeniusIntentsSDKConfig } from './types/sdk-config';
 import { JupiterConfig } from './protocols/jupiter/jupiter.types';
 import { RaydiumSdkConfig } from './protocols/raydium/raydium-v2.types';
 import { PumpFunConfig } from './protocols/pumpfun/pumpfun.types';
@@ -37,14 +37,16 @@ import { AftermathService } from './protocols/aftermath/aftermath.service';
 import { ZeroXService } from './protocols/zeroX/zeroX.service';
 import { DeBridgeService } from './protocols/debridge/debridge.service';
 import { GeniusBridgeService } from './protocols/genius-bridge/genius-bridge.service';
+import { EvmTransactionData } from './types/evm-transaction-data';
+import { Erc20Service } from './lib/erc20/erc20.service';
 
 let logger: ILogger;
 
-export class IntentsProtocols {
-  protected config: IntentsProtocolsConfig;
+export class GeniusIntents {
+  protected config: GeniusIntentsConfig;
   protected protocols: Map<ProtocolEnum, IIntentProtocol> = new Map();
 
-  constructor(config: IntentsProtocolsConfig = {}) {
+  constructor(config: GeniusIntentsConfig = {}) {
     // Configure logging
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -59,6 +61,7 @@ export class IntentsProtocols {
       timeout: 30000, // 30 seconds
       maxConcurrency: 10,
       ...config,
+      solanaRpcUrl: config.solanaRpcUrl || config.rcps?.[ChainIdEnum.SOLANA] || undefined,
     };
 
     this.initializeProtocols();
@@ -76,7 +79,7 @@ export class IntentsProtocols {
         protocol: ProtocolEnum.ODOS,
         factory: () =>
           this.createProtocolSafely(
-            () => new OdosService(this.config as unknown as IntentsSDKConfig),
+            () => new OdosService(this.config as unknown as GeniusIntentsSDKConfig),
             'ODOS',
           ),
       },
@@ -84,7 +87,8 @@ export class IntentsProtocols {
         protocol: ProtocolEnum.JUPITER,
         factory: () =>
           this.createProtocolSafely(
-            () => new JupiterService(this.config as unknown as IntentsSDKConfig & JupiterConfig),
+            () =>
+              new JupiterService(this.config as unknown as GeniusIntentsSDKConfig & JupiterConfig),
             'JUPITER',
           ),
       },
@@ -93,7 +97,7 @@ export class IntentsProtocols {
         factory: () =>
           this.createProtocolSafely(() => {
             return new RaydiumV2Service(
-              this.config as unknown as IntentsSDKConfig & RaydiumSdkConfig,
+              this.config as unknown as GeniusIntentsSDKConfig & RaydiumSdkConfig,
             );
           }, 'RAYDIUM_V2'),
       },
@@ -101,7 +105,9 @@ export class IntentsProtocols {
         protocol: ProtocolEnum.PUMPFUN,
         factory: () =>
           this.createProtocolSafely(() => {
-            return new PumpFunService(this.config as unknown as IntentsSDKConfig & PumpFunConfig);
+            return new PumpFunService(
+              this.config as unknown as GeniusIntentsSDKConfig & PumpFunConfig,
+            );
           }, 'PUMPFUN'),
       },
       {
@@ -109,7 +115,7 @@ export class IntentsProtocols {
         factory: () =>
           this.createProtocolSafely(() => {
             return new OpenOceanService(
-              this.config as unknown as IntentsSDKConfig & OpenOceanConfig,
+              this.config as unknown as GeniusIntentsSDKConfig & OpenOceanConfig,
             );
           }, 'OPEN_OCEAN'),
       },
@@ -117,7 +123,7 @@ export class IntentsProtocols {
         protocol: ProtocolEnum.OKX,
         factory: () =>
           this.createProtocolSafely(() => {
-            return new OkxService(this.config as unknown as IntentsSDKConfig & OKXConfig);
+            return new OkxService(this.config as unknown as GeniusIntentsSDKConfig & OKXConfig);
           }, 'OKX'),
       },
       {
@@ -125,7 +131,7 @@ export class IntentsProtocols {
         factory: () =>
           this.createProtocolSafely(() => {
             return new KyberswapService(
-              this.config as unknown as IntentsSDKConfig & KyberswapConfig,
+              this.config as unknown as GeniusIntentsSDKConfig & KyberswapConfig,
             );
           }, 'KYBERSWAP'),
       },
@@ -134,7 +140,7 @@ export class IntentsProtocols {
         factory: () =>
           this.createProtocolSafely(() => {
             return new AftermathService(
-              this.config as unknown as IntentsSDKConfig & AftermathConfig,
+              this.config as unknown as GeniusIntentsSDKConfig & AftermathConfig,
             );
           }, 'AFTERMATH'),
       },
@@ -142,14 +148,17 @@ export class IntentsProtocols {
         protocol: ProtocolEnum.ZEROX,
         factory: () =>
           this.createProtocolSafely(() => {
-            return new ZeroXService(this.config as unknown as IntentsSDKConfig & ZeroXConfig);
+            return new ZeroXService(this.config as unknown as GeniusIntentsSDKConfig & ZeroXConfig);
           }, 'ZEROX'),
       },
       {
         protocol: ProtocolEnum.DEBRIDGE,
         factory: () =>
           this.createProtocolSafely(
-            () => new DeBridgeService(this.config as unknown as IntentsSDKConfig & DeBridgeConfig),
+            () =>
+              new DeBridgeService(
+                this.config as unknown as GeniusIntentsSDKConfig & DeBridgeConfig,
+              ),
             'DEBRIDGE',
           ),
       },
@@ -159,7 +168,7 @@ export class IntentsProtocols {
           this.createProtocolSafely(
             () =>
               new GeniusBridgeService(
-                this.config as unknown as IntentsSDKConfig & GeniusBridgeConfig,
+                this.config as unknown as GeniusIntentsSDKConfig & GeniusBridgeConfig,
               ),
             'GENIUS_BRIDGE',
           ),
@@ -247,7 +256,7 @@ export class IntentsProtocols {
   /**
    * Execute price requests across compatible protocols
    */
-  async fetchPrice(params: IntentPriceParams): Promise<IntentsProtocolsResults<PriceResponse>> {
+  async fetchPrice(params: IntentPriceParams): Promise<GeniusIntentsResults<PriceResponse>> {
     const startTime = Date.now();
     const compatibleProtocols = this.getCompatibleProtocols(params);
 
@@ -289,7 +298,7 @@ export class IntentsProtocols {
   /**
    * Execute quote requests across compatible protocols
    */
-  async fetchQuote(params: IntentQuoteParams): Promise<IntentsProtocolsResults<QuoteResponse>> {
+  async fetchQuote(params: IntentQuoteParams): Promise<GeniusIntentsResults<QuoteResponse>> {
     const startTime = Date.now();
     const compatibleProtocols = this.getCompatibleProtocols(params);
 
@@ -318,6 +327,16 @@ export class IntentsProtocols {
       // Best mode: wait for all responses and select the best one
       allResults = await this.executeAll(promises);
       result = this.selectBestQuoteResponse(allResults);
+    }
+
+    if (this.config.checkApprovals && result) {
+      const approvalChecked = await this.checkApproval(result);
+      if (result.evmExecutionPayload && approvalChecked) {
+        result.evmExecutionPayload.approval = {
+          ...result.evmExecutionPayload.approval,
+          ...approvalChecked,
+        };
+      }
     }
 
     return {
@@ -471,6 +490,44 @@ export class IntentsProtocols {
     }).response;
   }
 
+  protected async checkApproval(result: QuoteResponse): Promise<{
+    approvalRequired?: boolean;
+    txnData: EvmTransactionData;
+  } | null> {
+    if (!result.evmExecutionPayload) {
+      return null;
+    }
+
+    if (typeof result.evmExecutionPayload.approval.required !== 'undefined') return null;
+
+    const approval = result.evmExecutionPayload.approval;
+
+    const calldata = Erc20Service.getApproveTxData(approval.spender, approval.amount);
+    const txnData = {
+      to: result.tokenIn,
+      data: calldata,
+      value: '0',
+    };
+
+    const rpcUrl = this.config.rcps?.[result.networkIn];
+    if (!rpcUrl) {
+      return {
+        txnData,
+      };
+    }
+
+    const erc20 = new Erc20Service(result.tokenIn, rpcUrl);
+    const allowance = await erc20.allowance(
+      result.from,
+      result.evmExecutionPayload.approval.spender,
+    );
+
+    return {
+      approvalRequired: allowance < BigInt(result.evmExecutionPayload.approval.amount),
+      txnData,
+    };
+  }
+
   /**
    * Get list of initialized protocols
    */
@@ -488,7 +545,7 @@ export class IntentsProtocols {
   /**
    * Update configuration
    */
-  updateConfig(config: Partial<IntentsProtocolsConfig>): void {
+  updateConfig(config: Partial<GeniusIntentsConfig>): void {
     this.config = { ...this.config, ...config };
 
     // Reinitialize protocols if protocol-specific configs changed

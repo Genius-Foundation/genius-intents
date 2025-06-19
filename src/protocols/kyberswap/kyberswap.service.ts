@@ -5,7 +5,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { formatAddress } from '../../utils/address';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { NATIVE_ADDRESS } from '../../utils/constants';
@@ -42,7 +42,7 @@ export class KyberswapService implements IIntentProtocol {
   public baseUrl: string;
   public clientId: string;
 
-  constructor(config: IntentsSDKConfig & KyberswapConfig) {
+  constructor(config: GeniusIntentsSDKConfig & KyberswapConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -204,7 +204,7 @@ export class KyberswapService implements IIntentProtocol {
         amountOut: kyberswapQuoteResponse.amountOut,
         from,
         receiver: receiver || from,
-        executionPayload: {
+        evmExecutionPayload: {
           transactionData: {
             data: kyberswapQuoteResponse.data,
             to: kyberswapQuoteResponse.routerAddress,

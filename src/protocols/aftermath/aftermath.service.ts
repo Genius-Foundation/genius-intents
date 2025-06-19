@@ -5,7 +5,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import {
@@ -28,7 +28,7 @@ export class AftermathService implements IIntentProtocol {
   protected readonly quoteParamOverrides: Partial<AftermathSwapParams> = {
     isSponsoredTx: false,
   };
-  constructor(config: IntentsSDKConfig & AftermathConfig) {
+  constructor(config: GeniusIntentsSDKConfig & AftermathConfig) {
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -200,9 +200,7 @@ export class AftermathService implements IIntentProtocol {
         slippage: priceResponse.slippage,
         priceImpact: priceResponse.priceImpact,
         estimatedGas: gasEstimate,
-        executionPayload: {
-          transactionData: [txBytes],
-        },
+        svmExecutionPayload: [txBytes],
         protocolResponse: { transactions: [txBytes] },
       };
 

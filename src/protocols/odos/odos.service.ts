@@ -4,7 +4,7 @@ import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { formatAddress } from '../../utils/address';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import {
@@ -44,7 +44,7 @@ export class OdosService implements IIntentProtocol {
   public readonly priceBaseUrl = this.baseUrl + this.priceEndpoint;
   public readonly assemblyBaseUrl = this.baseUrl + this.assemblyEndpoint;
 
-  constructor(config?: IntentsSDKConfig) {
+  constructor(config?: GeniusIntentsSDKConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -171,7 +171,7 @@ export class OdosService implements IIntentProtocol {
         amountOut: tokenOut.amount,
         from,
         receiver,
-        executionPayload: {
+        evmExecutionPayload: {
           transactionData: {
             data: odosQuoteResponse.transaction.data,
             to: odosQuoteResponse.transaction.to,

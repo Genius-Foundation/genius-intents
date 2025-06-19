@@ -6,7 +6,7 @@ import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { IntentsSDKConfig } from '../../types/sdk-config';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { NATIVE_SOL, WRAPPED_SOL } from '../../utils/constants';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
@@ -35,7 +35,7 @@ export class JupiterService implements IIntentProtocol {
   public baseUrl: string;
   public maxAccounts: number;
 
-  constructor(config?: IntentsSDKConfig & JupiterConfig) {
+  constructor(config?: GeniusIntentsSDKConfig & JupiterConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -160,9 +160,7 @@ export class JupiterService implements IIntentProtocol {
         receiver: receiver || from,
         slippage: priceResponse.slippage,
         priceImpact: priceResponse.priceImpact,
-        executionPayload: {
-          transactionData: [swapTransactionResponse.data.swapTransaction],
-        },
+        svmExecutionPayload: [swapTransactionResponse.data.swapTransaction],
         protocolResponse: { transactions: [] },
       };
       return quoteResponse;
