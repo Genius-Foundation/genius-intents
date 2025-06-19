@@ -1,6 +1,6 @@
 {
   "name": "genius-intents",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A unified SDK for interacting with intents-based protocols across multiple blockchains including Solana, Ethereum, and Sui",
   "license": "GNU",
   "author": "Samuel Videau <samuel@videau.io>",
