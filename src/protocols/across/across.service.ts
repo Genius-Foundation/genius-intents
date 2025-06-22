@@ -1,7 +1,7 @@
 import { acrossConfig } from './across.config';
 import { AcrossConfig, DepositV3Params } from './across.types';
 import { ethers } from 'ethers';
-import { ChainIdEnum, ProtocolEnum } from '../../types/enums';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { IntentPriceParams } from '../../types/price-params';
 import { IntentQuoteParams } from '../../types/quote-params';
 import { PriceResponse } from '../../types/price-response';
@@ -11,6 +11,8 @@ import { NATIVE_ADDRESS } from '../../utils/constants';
 import { AcrossClient, createAcrossClient } from '@across-protocol/app-sdk';
 import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
+import { sdkError } from '../../utils/throw-error';
+import { createErrorMessage } from '../../utils/create-error-message';
 
 let logger: ILogger;
 
@@ -49,99 +51,161 @@ export class AcrossService implements IIntentProtocol {
     if (config.fillDeadlineS) {
       this.fillDeadlineS = config.fillDeadlineS;
     }
+
+    logger.debug('AcrossService initialized', {
+      integratorId: config.acrossIntegratorId,
+      fillDeadlineS: this.fillDeadlineS,
+    });
   }
 
   public async fetchPrice(params: IntentPriceParams): Promise<PriceResponse> {
-    const validatedParams = this.validatePriceParams(params);
+    try {
+      logger.debug('Fetching price from Across', {
+        networkIn: params.networkIn,
+        networkOut: params.networkOut,
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+      });
 
-    const quote = await this.acrossClient.getQuote({
-      route: {
-        originChainId: validatedParams.networkIn,
-        destinationChainId: validatedParams.networkOut,
-        inputToken: validatedParams.tokenIn as `0x${string}`,
-        outputToken: validatedParams.tokenOut as `0x${string}`,
-      },
-      inputAmount: validatedParams.amountIn,
-    });
+      const validatedParams = this.validatePriceParams(params);
 
-    return {
-      protocol: this.protocol,
-      networkIn: params.networkIn,
-      networkOut: params.networkOut,
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountIn: params.amountIn,
-      amountOut: quote.deposit.outputAmount.toString(),
-      slippage: params.slippage,
-      priceImpact: 0, // Across doesn't provide price impact
-      protocolResponse: quote,
-    };
+      const quote = await this.acrossClient.getQuote({
+        route: {
+          originChainId: validatedParams.networkIn,
+          destinationChainId: validatedParams.networkOut,
+          inputToken: validatedParams.tokenIn as `0x${string}`,
+          outputToken: validatedParams.tokenOut as `0x${string}`,
+        },
+        inputAmount: validatedParams.amountIn,
+      });
+
+      logger.debug('Successfully received price from Across', {
+        amountOut: quote.deposit.outputAmount.toString(),
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+      });
+
+      return {
+        protocol: this.protocol,
+        networkIn: params.networkIn,
+        networkOut: params.networkOut,
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+        amountOut: quote.deposit.outputAmount.toString(),
+        slippage: params.slippage,
+        priceImpact: 0, // Across doesn't provide price impact
+        protocolResponse: quote,
+      };
+    } catch (error) {
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.PRICE_NOT_FOUND,
+        `Failed to fetch Across price, error: ${errorMessage}`,
+      );
+    }
   }
 
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
-    const validatedParams = this.validateQuoteParams(params);
+    try {
+      logger.debug('Fetching quote from Across', {
+        networkIn: params.networkIn,
+        networkOut: params.networkOut,
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+        from: params.from,
+        receiver: params.receiver,
+      });
 
-    const quote = await this.acrossClient.getQuote({
-      route: {
-        originChainId: validatedParams.networkIn,
-        destinationChainId: validatedParams.networkOut,
-        inputToken: validatedParams.tokenIn as `0x${string}`,
-        outputToken: validatedParams.tokenOut as `0x${string}`,
-      },
-      recipient: validatedParams.receiver as `0x${string}`,
-      inputAmount: validatedParams.amountIn,
-    });
+      const validatedParams = this.validateQuoteParams(params);
 
-    const quoteTimestamp = Math.floor(Date.now() / 1000);
+      const quote = await this.acrossClient.getQuote({
+        route: {
+          originChainId: validatedParams.networkIn,
+          destinationChainId: validatedParams.networkOut,
+          inputToken: validatedParams.tokenIn as `0x${string}`,
+          outputToken: validatedParams.tokenOut as `0x${string}`,
+        },
+        recipient: validatedParams.receiver as `0x${string}`,
+        inputAmount: validatedParams.amountIn,
+      });
 
-    console.log('quote', quote.deposit);
+      const quoteTimestamp = Math.floor(Date.now() / 1000);
 
-    const callData = this.createDepositV3Calldata({
-      depositor: params.from,
-      recipient: params.receiver,
-      inputToken: params.tokenIn,
-      outputToken: params.tokenOut,
-      inputAmount: quote.deposit.inputAmount,
-      outputAmount: quote.deposit.outputAmount,
-      destinationChainId: quote.deposit.destinationChainId,
-      exclusiveRelayer: quote.deposit.exclusiveRelayer,
-      quoteTimestamp,
-      fillDeadline: quoteTimestamp + this.fillDeadlineS,
-      exclusivityDeadlineOffset: quote.deposit.exclusivityDeadline
-        ? quoteTimestamp + quote.deposit.exclusivityDeadline
-        : 0,
-    });
+      logger.debug('Received quote from Across', {
+        deposit: quote.deposit,
+        quoteTimestamp,
+      });
 
-    const address = acrossConfig.addresses[params.networkIn];
-    if (!address) {
-      throw new Error(`No Across address found for network ${params.networkIn}`);
+      const callData = this.createDepositV3Calldata({
+        depositor: params.from,
+        recipient: params.receiver,
+        inputToken: params.tokenIn,
+        outputToken: params.tokenOut,
+        inputAmount: quote.deposit.inputAmount,
+        outputAmount: quote.deposit.outputAmount,
+        destinationChainId: quote.deposit.destinationChainId,
+        exclusiveRelayer: quote.deposit.exclusiveRelayer,
+        quoteTimestamp,
+        fillDeadline: quoteTimestamp + this.fillDeadlineS,
+        exclusivityDeadlineOffset: quote.deposit.exclusivityDeadline
+          ? quoteTimestamp + quote.deposit.exclusivityDeadline
+          : 0,
+      });
+
+      const address = acrossConfig.addresses[params.networkIn];
+      if (!address) {
+        logger.error(`No Across address found for network ${params.networkIn}`);
+        throw sdkError(
+          SdkErrorEnum.QUOTE_NOT_FOUND,
+          `No Across address found for network ${params.networkIn}`,
+        );
+      }
+
+      logger.debug('Successfully created quote from Across', {
+        amountOut: quote.deposit.outputAmount.toString(),
+        minAmountOut: quote.deposit.outputAmount.toString(),
+        fee: '0', // Across doesn't provide separate fee information
+        to: address,
+        isNative: quote.deposit.isNative,
+      });
+
+      return {
+        protocol: this.protocol,
+        networkIn: params.networkIn,
+        networkOut: params.networkOut,
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+        amountOut: quote.deposit.outputAmount.toString(),
+        slippage: params.slippage,
+        from: params.from,
+        receiver: params.receiver,
+        evmExecutionPayload: {
+          transactionData: {
+            to: address,
+            data: callData,
+            value: quote.deposit.isNative ? params.amountIn : '0',
+          },
+          approval: {
+            spender: address,
+            token: params.tokenIn,
+            amount: params.amountIn,
+          },
+        },
+        protocolResponse: quote,
+      };
+    } catch (error) {
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.QUOTE_NOT_FOUND,
+        `Failed to fetch Across quote, error: ${errorMessage}`,
+      );
     }
-
-    return {
-      protocol: this.protocol,
-      networkIn: params.networkIn,
-      networkOut: params.networkOut,
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountIn: params.amountIn,
-      amountOut: quote.deposit.outputAmount.toString(),
-      slippage: params.slippage,
-      from: params.from,
-      receiver: params.receiver,
-      evmExecutionPayload: {
-        transactionData: {
-          to: address,
-          data: callData,
-          value: quote.deposit.isNative ? params.amountIn : '0',
-        },
-        approval: {
-          spender: address,
-          token: params.tokenIn,
-          amount: params.amountIn,
-        },
-      },
-      protocolResponse: quote,
-    };
   }
 
   public isCorrectConfig<T extends { [key: string]: string }>(config: {
@@ -190,13 +254,22 @@ export class AcrossService implements IIntentProtocol {
     params: IntentPriceParams,
   ): IntentPriceParams & { tokenIn: string; tokenOut: string } {
     if (!this.chains.includes(params.networkIn as ChainIdEnum)) {
-      throw new Error('Unsupported origin network');
+      logger.error(`Unsupported origin network: ${params.networkIn}`);
+      throw sdkError(
+        SdkErrorEnum.INVALID_PARAMS,
+        `Unsupported origin network: ${params.networkIn}`,
+      );
     }
     if (!this.chains.includes(params.networkOut as ChainIdEnum)) {
-      throw new Error('Unsupported destination network');
+      logger.error(`Unsupported destination network: ${params.networkOut}`);
+      throw sdkError(
+        SdkErrorEnum.INVALID_PARAMS,
+        `Unsupported destination network: ${params.networkOut}`,
+      );
     }
     if (params.amountIn === '0') {
-      throw new Error('Amount must be greater than 0');
+      logger.error('Amount must be greater than 0');
+      throw sdkError(SdkErrorEnum.INVALID_PARAMS, 'Amount must be greater than 0');
     }
 
     let tokenIn = params.tokenIn;
@@ -209,6 +282,14 @@ export class AcrossService implements IIntentProtocol {
     if (tokenOut.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) {
       tokenOut = NATIVE_ADDRESS;
     }
+
+    logger.debug('Price params validated successfully', {
+      networkIn: params.networkIn,
+      networkOut: params.networkOut,
+      tokenIn,
+      tokenOut,
+      amountIn: params.amountIn,
+    });
 
     return {
       ...params,
@@ -223,8 +304,14 @@ export class AcrossService implements IIntentProtocol {
     const validatedParams = this.validatePriceParams(params);
 
     if (!params.receiver) {
-      throw new Error('Receiver address is required');
+      logger.error('Receiver address is required');
+      throw sdkError(SdkErrorEnum.INVALID_PARAMS, 'Receiver address is required');
     }
+
+    logger.debug('Quote params validated successfully', {
+      from: params.from,
+      receiver: params.receiver,
+    });
 
     return {
       ...validatedParams,

@@ -209,13 +209,7 @@ export class GeniusBridgeService implements IIntentProtocol {
   ): Promise<GeniusBridgePriceResponse> {
     const url = `${this.baseUrl}${this.priceEndpoint}`;
 
-    logger.debug('Making GeniusBridge price request', {
-      networkIn: params.networkIn,
-      networkOut: params.networkOut,
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountIn: params.amountIn,
-    });
+    logger.debug('Making GeniusBridge price request', params);
 
     try {
       const response = await axios.post<GeniusBridgePriceResponse>(url, params);
