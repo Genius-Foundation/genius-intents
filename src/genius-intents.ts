@@ -39,6 +39,8 @@ import { DeBridgeService } from './protocols/debridge/debridge.service';
 import { GeniusBridgeService } from './protocols/genius-bridge/genius-bridge.service';
 import { EvmTransactionData } from './types/evm-transaction-data';
 import { Erc20Service } from './lib/erc20/erc20.service';
+import { AcrossService } from './protocols/across/across.service';
+import { AcrossConfig } from './protocols/across/across.types';
 
 let logger: ILogger;
 
@@ -171,6 +173,15 @@ export class GeniusIntents {
                 this.config as unknown as GeniusIntentsSDKConfig & GeniusBridgeConfig,
               ),
             'GENIUS_BRIDGE',
+          ),
+      },
+      {
+        protocol: ProtocolEnum.ACROSS,
+        factory: () =>
+          this.createProtocolSafely(
+            () =>
+              new AcrossService(this.config as unknown as GeniusIntentsSDKConfig & AcrossConfig),
+            'ACROSS',
           ),
       },
     ];
