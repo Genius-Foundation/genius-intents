@@ -1,3 +1,33 @@
+## [0.4.0] - 2025-06-23
+
+## [0.4.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.3.0...v0.4.0) (2025-06-23)
+
+
+### Features
+
+* add across protocol ([#28](https://github.com/Genius-Foundation/genius-intents/issues/28)) ([7c0711f](https://github.com/Genius-Foundation/genius-intents/commit/7c0711f77d7a7c67626534d00b629974682cbadc))
+
+
+### Bug Fixes
+
+* okx slippage formating ([4c96ae9](https://github.com/Genius-Foundation/genius-intents/commit/4c96ae9574f3ec14fc8b4d82e889360d9b248daa))
+* temp disable genius bridge by default ([4b7e142](https://github.com/Genius-Foundation/genius-intents/commit/4b7e1429f93c3acc75ad9aad0ba1c0b6fb8602bc))
+
+
+### Code Refactoring
+
+* simplify GeniusBridgeService constructor by integrating GeniusBridgeConfig for cleaner configuration handling ([b61a308](https://github.com/Genius-Foundation/genius-intents/commit/b61a308023eac2ab5c3bd284382e25882281b38f))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.3.0 ([b57e900](https://github.com/Genius-Foundation/genius-intents/commit/b57e9004df801a1d13bcc000c64df72a37b39ab5))
+
+
+
+---
+
+
 ## [0.3.0] - 2025-06-19
 
 ## [0.3.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.2.1...v0.3.0) (2025-06-19)
