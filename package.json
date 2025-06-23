@@ -84,6 +84,7 @@
     "typescript-eslint": "^8.26.1"
   },
   "dependencies": {
+    "@across-protocol/app-sdk": "^0.2.3",
     "@jup-ag/api": "^6.0.40",
     "@mysten/sui": "^1.26.0",
     "@raydium-io/raydium-sdk-v2": "^0.1.139-alpha",

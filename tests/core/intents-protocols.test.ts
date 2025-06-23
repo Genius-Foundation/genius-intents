@@ -4,6 +4,12 @@ import { ChainIdEnum, ProtocolEnum } from '../../src/types/enums';
 import { GeniusIntentsConfig } from '../../src/types/genius-intents';
 import { createPriceParams, createQuoteParams } from '../fixtures/test-data';
 
+// Mock the problematic ES module package
+jest.mock('@across-protocol/app-sdk', () => ({
+  createAcrossClient: jest.fn(),
+  AcrossClient: jest.fn(),
+}));
+
 // Mock all protocol services to prevent actual network calls
 jest.mock('../../src/protocols/odos/odos.service');
 jest.mock('../../src/protocols/jupiter/jupiter.service');
@@ -16,6 +22,7 @@ jest.mock('../../src/protocols/aftermath/aftermath.service');
 jest.mock('../../src/protocols/zeroX/zeroX.service');
 jest.mock('../../src/protocols/debridge/debridge.service');
 jest.mock('../../src/protocols/genius-bridge/genius-bridge.service');
+jest.mock('../../src/protocols/across/across.service');
 
 describe('GeniusIntents', () => {
   let geniusIntents: GeniusIntents;
