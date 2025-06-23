@@ -10,6 +10,7 @@ export enum ProtocolEnum {
   OKX = 'OKX',
   ZEROX = '0x',
   GENIUS_BRIDGE = 'genius-bridge',
+  ACROSS = 'across',
 }
 
 export enum ChainIdEnum {

@@ -6,6 +6,12 @@ module.exports = {
       useESM: true,
     }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@across-protocol/app-sdk|.*\\.mjs$))',
+  ],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
   testMatch: [
     '<rootDir>/tests/**/*.test.ts',
     '<rootDir>/tests/**/*.spec.ts'

@@ -11,6 +11,7 @@ import { KyberswapQuoteResponse } from '../protocols/kyberswap/kyberswap.types';
 import { ZeroXQuoteResponse } from '../protocols/zeroX/zeroX.types';
 import { GeniusBridgeQuoteResponse } from '../protocols/genius-bridge/genius-bridge.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
+import { AcrossQuoteResponse } from '../protocols/across/across.types';
 
 export type QuoteResponse = {
   protocol: ProtocolEnum;
@@ -41,4 +42,5 @@ export type RawProtocolQuoteResponse =
   | KyberswapQuoteResponse
   | ZeroXQuoteResponse
   | GeniusBridgeQuoteResponse
+  | AcrossQuoteResponse
   | DeBridgeQuoteResponse;

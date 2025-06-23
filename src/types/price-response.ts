@@ -9,6 +9,7 @@ import { OpenOceanPriceResponse } from '../protocols/openocean/openocean.types';
 import { ZeroXPriceResponse } from '../protocols/zeroX/zeroX.types';
 import { GeniusBridgePriceResponse } from '../protocols/genius-bridge/genius-bridge.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
+import { AcrossQuoteResponse } from '../protocols/across/across.types';
 
 export type RawProtocolPriceResponse =
   | OdosPriceResponse
@@ -20,6 +21,7 @@ export type RawProtocolPriceResponse =
   | OpenOceanPriceResponse
   | ZeroXPriceResponse
   | GeniusBridgePriceResponse
+  | AcrossQuoteResponse
   // Debridge only supports quotes
   | DeBridgeQuoteResponse;
 
