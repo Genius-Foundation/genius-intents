@@ -21,6 +21,7 @@ import {
   GeniusBridgeQuoteResponse,
   GeniusBridgePriceParams,
   GeniusBridgeQuoteParams,
+  GeniusBridgeConfig,
 } from './genius-bridge.types';
 import axios from 'axios';
 import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
@@ -46,13 +47,7 @@ export class GeniusBridgeService implements IIntentProtocol {
   public readonly priceEndpoint: string;
   public readonly quoteEndpoint: string;
 
-  constructor(
-    config?: GeniusIntentsSDKConfig & {
-      geniusBridgeBaseUrl?: string;
-      geniusBridgePriceEndpoint?: string;
-      geniusBridgeQuoteEndpoint?: string;
-    },
-  ) {
+  constructor(config?: GeniusIntentsSDKConfig & GeniusBridgeConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
