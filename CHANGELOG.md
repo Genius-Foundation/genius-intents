@@ -1,3 +1,41 @@
+## [0.3.0] - 2025-06-19
+
+## [0.3.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.2.1...v0.3.0) (2025-06-19)
+
+
+### Features
+
+* add optional approval checks ([83becdf](https://github.com/Genius-Foundation/genius-intents/commit/83becdfded035fdb4759dfd4b1c60d7f36caae0b))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.2.1 ([d1460ae](https://github.com/Genius-Foundation/genius-intents/commit/d1460ae2b7532e7ef630b404d7fddaea4ac0477e))
+
+
+
+---
+
+
+## [0.2.1] - 2025-06-16
+
+### [0.2.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.2.0...v0.2.1) (2025-06-16)
+
+
+### Bug Fixes
+
+* jupiter class slippage ([e503493](https://github.com/Genius-Foundation/genius-intents/commit/e5034932a30b777a9b4040dee4cec0d6172b9625))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.2.0 ([f99116e](https://github.com/Genius-Foundation/genius-intents/commit/f99116e7a6409c33879f98de915fdcd6f6434cc0))
+
+
+
+---
+
+
 ## [0.2.0] - 2025-06-15
 
 ## [0.2.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.1.7...v0.2.0) (2025-06-15)
