@@ -16,6 +16,7 @@ jest.mock('../../src/protocols/aftermath/aftermath.service');
 jest.mock('../../src/protocols/zeroX/zeroX.service');
 jest.mock('../../src/protocols/debridge/debridge.service');
 jest.mock('../../src/protocols/genius-bridge/genius-bridge.service');
+jest.mock('../../src/protocols/across/across.service');
 
 describe('GeniusIntents', () => {
   let geniusIntents: GeniusIntents;
