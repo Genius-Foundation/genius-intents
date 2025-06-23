@@ -63,6 +63,11 @@ export class GeniusIntents {
       timeout: 30000, // 30 seconds
       maxConcurrency: 10,
       ...config,
+      // Properly merge excludeProtocols arrays
+      excludeProtocols: [
+        ...(config.excludeProtocols || []),
+        ...(config.includeProtocols ? [] : [ProtocolEnum.GENIUS_BRIDGE]), // Only exclude by default if not explicitly included
+      ],
       solanaRpcUrl: config.solanaRpcUrl || config.rcps?.[ChainIdEnum.SOLANA] || undefined,
     };
 
