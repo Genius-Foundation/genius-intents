@@ -171,16 +171,18 @@ export class OkxService implements IIntentProtocol {
     params: IntentQuoteParams,
   ): Promise<QuoteResponse & { protocolResponse: OkxQuoteResponse }> {
     logger.info(`Fetching swap quote for address: ${params.from}`);
-    this.validatePriceParams(params);
-    const { from, receiver, tokenIn, tokenOut, amountIn, networkIn, networkOut } = params;
+    const validatedParams = this.validateQuoteParams(params);
+    const { from, tokenIn, tokenOut, amountIn, networkIn, networkOut, slippage, receiver } =
+      validatedParams;
+
     const quoteRequestBody: OkxQuoteRequestBody = {
       amount: amountIn.toString(),
       chainId: networkIn.toString(),
       fromTokenAddress: tokenIn,
       toTokenAddress: tokenOut,
-      userWalletAddress: formatAddress(from),
-      slippage: params.slippage >= 1 ? params.slippage / 100 : params.slippage,
-      swapReceiverAddress: formatAddress(receiver || from),
+      userWalletAddress: from,
+      slippage,
+      swapReceiverAddress: receiver,
     };
 
     logger.debug('Generated OKX quote request body', quoteRequestBody);
@@ -269,8 +271,8 @@ export class OkxService implements IIntentProtocol {
     const requestBody: OkxPriceRequestBody = {
       amount: amountIn.toString(),
       chainId: networkIn.toString(),
-      fromTokenAddress: isNative(tokenIn) ? ZERO_ADDRESS : formatAddress(tokenIn),
-      toTokenAddress: isNative(tokenOut) ? ZERO_ADDRESS : formatAddress(tokenOut),
+      fromTokenAddress: tokenIn,
+      toTokenAddress: tokenOut,
     };
 
     logger.debug('Generated OKX request body', requestBody);
@@ -308,7 +310,7 @@ export class OkxService implements IIntentProtocol {
     return { signature, timestamp };
   }
 
-  protected validatePriceParams(params: IntentPriceParams): void {
+  protected validatePriceParams(params: IntentPriceParams): IntentPriceParams {
     const { networkIn, networkOut } = params;
     logger.debug('Validating price params');
 
@@ -337,6 +339,23 @@ export class OkxService implements IIntentProtocol {
       logger.error(`Network ${networkOut} not supported`);
       throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Network ${networkOut} not supported`);
     }
+
+    return {
+      ...params,
+      slippage: params.slippage / 100,
+      from: formatAddress(params.from),
+      tokenIn: isNative(params.tokenIn) ? ZERO_ADDRESS : formatAddress(params.tokenIn),
+      tokenOut: isNative(params.tokenOut) ? ZERO_ADDRESS : formatAddress(params.tokenOut),
+    };
+  }
+
+  protected validateQuoteParams(params: IntentQuoteParams): IntentQuoteParams {
+    const validatedParams = this.validatePriceParams(params);
+
+    return {
+      ...validatedParams,
+      receiver: formatAddress(params.receiver),
+    };
   }
 
   protected isOkxPriceResponse(response: RawProtocolPriceResponse): response is OkxPriceResponse {
