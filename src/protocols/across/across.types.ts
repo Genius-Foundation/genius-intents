@@ -1,6 +1,6 @@
 export type AcrossConfig = {
   acrossIntegratorId: `0x${string}`;
-  fillDeadlineS?: number; // default 21600
+  acrossFillDeadlineS?: number; // default 21600
 };
 
 export type DepositV3Params = {

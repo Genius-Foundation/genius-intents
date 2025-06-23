@@ -48,8 +48,8 @@ export class AcrossService implements IIntentProtocol {
       chains: [],
     });
 
-    if (config.fillDeadlineS) {
-      this.fillDeadlineS = config.fillDeadlineS;
+    if (config.acrossFillDeadlineS) {
+      this.fillDeadlineS = config.acrossFillDeadlineS;
     }
 
     logger.debug('AcrossService initialized', {
@@ -110,15 +110,7 @@ export class AcrossService implements IIntentProtocol {
 
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
     try {
-      logger.debug('Fetching quote from Across', {
-        networkIn: params.networkIn,
-        networkOut: params.networkOut,
-        tokenIn: params.tokenIn,
-        tokenOut: params.tokenOut,
-        amountIn: params.amountIn,
-        from: params.from,
-        receiver: params.receiver,
-      });
+      logger.debug('Fetching quote from Across', params);
 
       const validatedParams = this.validateQuoteParams(params);
 

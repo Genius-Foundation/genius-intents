@@ -12,6 +12,7 @@ import { OpenOceanConfig } from '../protocols/openocean/openocean.types';
 import { AftermathConfig } from '../protocols/aftermath/aftermath.types';
 import { ZeroXConfig } from '../protocols/zeroX/zeroX.types';
 import { PumpFunConfig } from '../protocols/pumpfun/pumpfun.types';
+import { AcrossConfig } from '../protocols/across';
 
 /**
  * Configuration interface for IntentsProtocols class
@@ -68,7 +69,8 @@ export type OptionalIntentsProtocolsConfig = Partial<
     OpenOceanConfig &
     AftermathConfig &
     ZeroXConfig &
-    PumpFunConfig
+    PumpFunConfig &
+    AcrossConfig
 >;
 
 /**
