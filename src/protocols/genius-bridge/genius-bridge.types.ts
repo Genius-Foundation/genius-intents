@@ -1,5 +1,3 @@
-import { ChainIdEnum } from '../../types/enums';
-
 export type GeniusBridgeConfig = {
   geniusBridgeBaseUrl?: string;
 };
@@ -39,25 +37,6 @@ export type Authority = {
   networkOutAddress: string;
 };
 
-export type GeniusBridgePriceParams = {
-  networkIn: number;
-  networkOut: number;
-  tokenIn: string;
-  tokenOut: string;
-  amountIn: string;
-  slippage: number;
-  from: string;
-  callTarget?: string;
-  callData?: string;
-};
-
-export type GeniusBridgeQuoteParams = GeniusBridgePriceParams & {
-  priceResponse?: GeniusBridgePriceResponse;
-  to: string;
-  authority?: Authority;
-  permit?: Permit;
-};
-
 export type EvmArbitraryCall = {
   from?: string;
   to: string;
@@ -80,31 +59,4 @@ export type ApprovalRequired = {
   spender: string;
   amount: string;
   payload: EvmArbitraryCall;
-};
-
-export type GeniusBaseBridgeResponse = {
-  tokenIn: string;
-  tokenOut: string;
-  networkIn: ChainIdEnum;
-  networkOut: ChainIdEnum;
-  amountIn: string;
-  amountOut: string;
-  minAmountOut: string;
-  slippage: number;
-  fee: string;
-  feesDetails: GeniusBridgeFeesBreakdown;
-  arbitraryCall?: EvmArbitraryCall;
-};
-
-export type GeniusBridgePriceResponse = GeniusBaseBridgeResponse & {
-  swapInAmountOut?: string;
-  swapOutAmountOut?: string;
-  permit2ToSign?: PermitSignatureParams;
-};
-
-export type GeniusBridgeQuoteResponse = GeniusBaseBridgeResponse & {
-  seed: string;
-  evmExecutionPayload?: EvmArbitraryCall;
-  svmExecutionPayload?: string[];
-  approvalRequired?: ApprovalRequired | null;
 };
