@@ -10,5 +10,6 @@ export const acrossConfig: {
     [ChainIdEnum.OPTIMISM]: '0x6f26Bf09B1C792e3228e5467807a900A503c0281',
     [ChainIdEnum.POLYGON]: '0x9295ee1d8C5b022Be115A2AD3c30C72E34e7F096',
     [ChainIdEnum.ARBITRUM]: '0xe35e9842fceaca96570b734083f4a58e8f7c5f2a',
+    [ChainIdEnum.BSC]: '0x4e8E101924eDE233C13e2D8622DC8aED2872d505',
   },
 };
