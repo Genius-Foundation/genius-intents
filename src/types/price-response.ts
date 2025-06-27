@@ -1,5 +1,4 @@
 import { OdosPriceResponse } from '../protocols/odos/odos.types';
-import { PumpFunPriceResponse } from '../protocols/pumpfun/pumpfun.types';
 import { RaydiumV2PriceResponse } from '../protocols/raydium/raydium-v2.types';
 import { JupiterPriceResponse } from '../protocols/jupiter/jupiter.types';
 import { ProtocolEnum } from './enums';
@@ -14,7 +13,6 @@ import { GeniusBridgePriceResponse } from 'genius-bridge-sdk';
 export type RawProtocolPriceResponse =
   | OdosPriceResponse
   | RaydiumV2PriceResponse
-  | PumpFunPriceResponse
   | JupiterPriceResponse
   | OkxPriceResponse
   | AftermathPriceResponse

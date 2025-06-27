@@ -4,7 +4,7 @@ A unified TypeScript SDK for interacting with multiple DeFi protocols and intent
 
 ## 🚀 Features
 
-- **Multi-Protocol Support**: Seamlessly interact with Jupiter, Raydium, PumpFun, Odos, OKX, Kyberswap, OpenOcean, and Aftermath
+- **Multi-Protocol Support**: Seamlessly interact with Jupiter, Raydium, Odos, OKX, Kyberswap, OpenOcean, and Aftermath
 - **Cross-Chain Compatible**: Support for Solana, Ethereum, and Sui networks
 - **Intent-Based Trading**: Execute complex trading strategies with simple intent definitions
 - **TypeScript First**: Full type safety and excellent developer experience
@@ -123,7 +123,7 @@ const intentsSDK = new IntentsProtocols({
 // Exclude specific protocols
 const intentsSDKExclude = new IntentsProtocols({
   method: 'race',
-  excludeProtocols: [ProtocolEnum.PUMPFUN],
+  excludeProtocols: [ProtocolEnum.RAYDIUM],
   timeout: 15000
 });
 ```
@@ -235,7 +235,6 @@ Get detailed quotes including transaction data.
 |----------|-----------|--------|-------------|
 | Jupiter | `Jupiter` | Solana | Leading Solana DEX aggregator |
 | Raydium V2 | `Raydium` | Solana | Automated market maker |
-| PumpFun | `PumpFun` | Solana | Meme token trading platform |
 | Odos | `Odos` | Multi-chain | Multi-chain DEX aggregator |
 | OKX | `Okx` | Multi-chain | Centralized exchange DEX |
 | Kyberswap | `Kyberswap` | Multi-chain | Dynamic market maker |

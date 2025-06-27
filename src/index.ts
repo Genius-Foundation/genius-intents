@@ -3,7 +3,6 @@ export * as Jupiter from './protocols/jupiter';
 export * as Okx from './protocols/okx';
 export * as Raydium from './protocols/raydium';
 export * as Odos from './protocols/odos';
-export * as PumpFun from './protocols/pumpfun';
 export * as Kyberswap from './protocols/kyberswap';
 export * as OpenOcean from './protocols/openocean';
 export * as Aftermath from './protocols/aftermath';

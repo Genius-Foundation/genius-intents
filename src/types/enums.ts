@@ -1,6 +1,5 @@
 export enum ProtocolEnum {
   ODOS = 'odos',
-  PUMPFUN = 'pumpfun',
   RAYDIUM_V2 = 'raydium-v2',
   JUPITER = 'jupiter',
   OPEN_OCEAN = 'OpenOcean',
