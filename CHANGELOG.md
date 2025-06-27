@@ -1,3 +1,27 @@
+## [0.5.0] - 2025-06-27
+
+## [0.5.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.4.0...v0.5.0) (2025-06-27)
+
+
+### Features
+
+* add BSC support to Across protocol configuration and service ([c1b13a3](https://github.com/Genius-Foundation/genius-intents/commit/c1b13a39c8268e077c31afa1c700cf94ae8b6414))
+
+
+### Code Refactoring
+
+* integrate GeniusBridgeSdk into GeniusBridgeService for improved API interaction and remove redundant price/quote request methods ([015e36a](https://github.com/Genius-Foundation/genius-intents/commit/015e36ae576a7654f7f735b31758541932d0f9c4))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.4.0 ([51f95f3](https://github.com/Genius-Foundation/genius-intents/commit/51f95f337664b986b027dd8148e0f20420560b04))
+
+
+
+---
+
+
 ## [0.4.0] - 2025-06-23
 
 ## [0.4.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.3.0...v0.4.0) (2025-06-23)
