@@ -94,7 +94,6 @@
     "ethers": "^6.13.5",
     "genius-bridge-sdk": "^0.0.2",
     "jest": "^29.7.0",
-    "pumpdotfun-sdk": "^1.4.2",
     "viem": "^2.31.4"
   },
   "publishConfig": {

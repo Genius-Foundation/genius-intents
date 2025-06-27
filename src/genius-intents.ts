@@ -16,7 +16,6 @@ import {
 import { GeniusIntentsSDKConfig } from './types/sdk-config';
 import { JupiterConfig } from './protocols/jupiter/jupiter.types';
 import { RaydiumSdkConfig } from './protocols/raydium/raydium-v2.types';
-import { PumpFunConfig } from './protocols/pumpfun/pumpfun.types';
 import { OpenOceanConfig } from './protocols/openocean/openocean.types';
 import { OKXConfig } from './protocols/okx/okx.types';
 import { KyberswapConfig } from './protocols/kyberswap/kyberswap.types';
@@ -27,7 +26,6 @@ import { GeniusBridgeConfig } from './protocols/genius-bridge/genius-bridge.type
 
 // Import all available protocol services
 import { OdosService } from './protocols/odos/odos.service';
-import { PumpFunService } from './protocols/pumpfun/pumpfun.service';
 import { RaydiumV2Service } from './protocols/raydium/raydium-v2.service';
 import { JupiterService } from './protocols/jupiter/jupiter.service';
 import { OpenOceanService } from './protocols/openocean/openocean.service';
@@ -107,15 +105,6 @@ export class GeniusIntents {
               this.config as unknown as GeniusIntentsSDKConfig & RaydiumSdkConfig,
             );
           }, 'RAYDIUM_V2'),
-      },
-      {
-        protocol: ProtocolEnum.PUMPFUN,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new PumpFunService(
-              this.config as unknown as GeniusIntentsSDKConfig & PumpFunConfig,
-            );
-          }, 'PUMPFUN'),
       },
       {
         protocol: ProtocolEnum.OPEN_OCEAN,

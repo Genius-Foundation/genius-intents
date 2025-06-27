@@ -14,7 +14,6 @@ jest.mock('@across-protocol/app-sdk', () => ({
 jest.mock('../../src/protocols/odos/odos.service');
 jest.mock('../../src/protocols/jupiter/jupiter.service');
 jest.mock('../../src/protocols/raydium/raydium-v2.service');
-jest.mock('../../src/protocols/pumpfun/pumpfun.service');
 jest.mock('../../src/protocols/openocean/openocean.service');
 jest.mock('../../src/protocols/okx/okx.service');
 jest.mock('../../src/protocols/kyberswap/kyberswap.service');
