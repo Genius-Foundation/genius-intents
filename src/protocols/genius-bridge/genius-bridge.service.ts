@@ -16,15 +16,13 @@ import {
   validateSolanaAddress,
 } from '../../utils/address-validation';
 import { NATIVE_ADDRESS } from '../../utils/constants';
+import { GeniusBridgeConfig } from './genius-bridge.types';
+import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
 import {
-  GeniusBridgePriceResponse,
-  GeniusBridgeQuoteResponse,
   GeniusBridgePriceParams,
   GeniusBridgeQuoteParams,
-  GeniusBridgeConfig,
-} from './genius-bridge.types';
-import axios from 'axios';
-import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
+  GeniusBridgeSdk,
+} from 'genius-bridge-sdk';
 
 let logger: ILogger;
 
@@ -35,6 +33,7 @@ export class GeniusBridgeService implements IIntentProtocol {
     ChainIdEnum.ARBITRUM,
     ChainIdEnum.OPTIMISM,
     ChainIdEnum.POLYGON,
+    ChainIdEnum.SONIC,
     ChainIdEnum.BSC,
     ChainIdEnum.AVALANCHE,
     ChainIdEnum.BASE,
@@ -43,9 +42,7 @@ export class GeniusBridgeService implements IIntentProtocol {
   ];
   public readonly singleChain = false;
   public readonly multiChain = true;
-  public readonly baseUrl: string;
-  public readonly priceEndpoint: string;
-  public readonly quoteEndpoint: string;
+  protected geniusBridgeSdk: GeniusBridgeSdk;
 
   constructor(config?: GeniusIntentsSDKConfig & GeniusBridgeConfig) {
     if (config?.debug) {
@@ -57,12 +54,7 @@ export class GeniusBridgeService implements IIntentProtocol {
     }
     logger = LoggerFactory.getLogger();
 
-    // Apply configuration with defaults
-    this.baseUrl =
-      config?.geniusBridgeBaseUrl ||
-      'http://genius-bridge-staging-894762848.us-east-2.elb.amazonaws.com';
-    this.priceEndpoint = '/quoting/price';
-    this.quoteEndpoint = '/quoting/quote';
+    this.geniusBridgeSdk = new GeniusBridgeSdk(config);
   }
 
   isCorrectConfig<T extends { [key: string]: string }>(_config: {
@@ -77,11 +69,7 @@ export class GeniusBridgeService implements IIntentProtocol {
       this.validatePriceParams(params);
       const transformedParams = this.transformPriceParams(params);
 
-      const response = await this.makeGeniusBridgePriceRequest(transformedParams);
-
-      if (response instanceof Error) {
-        throw response;
-      }
+      const response = await this.geniusBridgeSdk.fetchPrice(transformedParams);
 
       logger.debug('Successfully received price info from GeniusBridge', {
         amountOut: response.amountOut,
@@ -117,20 +105,7 @@ export class GeniusBridgeService implements IIntentProtocol {
       this.validateQuoteParams(params);
       const transformedParams = this.transformQuoteParams(params);
 
-      const priceResponse = await this.makeGeniusBridgePriceRequest(transformedParams);
-
-      if (priceResponse instanceof Error) {
-        throw priceResponse;
-      }
-
-      const response = await this.makeGeniusBridgeQuoteRequest({
-        ...transformedParams,
-        priceResponse,
-      });
-
-      if (response instanceof Error) {
-        throw response;
-      }
+      const response = await this.geniusBridgeSdk.fetchQuote(transformedParams);
 
       const approval: Erc20Approval = {
         token: response.tokenIn,
@@ -195,44 +170,6 @@ export class GeniusBridgeService implements IIntentProtocol {
       throw sdkError(
         SdkErrorEnum.QUOTE_NOT_FOUND,
         `Failed to fetch GeniusBridge quote, error: ${errorMessage}`,
-      );
-    }
-  }
-
-  public async makeGeniusBridgePriceRequest(
-    params: GeniusBridgePriceParams,
-  ): Promise<GeniusBridgePriceResponse> {
-    const url = `${this.baseUrl}${this.priceEndpoint}`;
-
-    logger.debug('Making GeniusBridge price request', params);
-
-    try {
-      const response = await axios.post<GeniusBridgePriceResponse>(url, params);
-      return response.data;
-    } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error('Failed to fetch price from GeniusBridge', errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch GeniusBridge price: ${errorMessage}`,
-      );
-    }
-  }
-
-  public async makeGeniusBridgeQuoteRequest(
-    params: GeniusBridgeQuoteParams,
-  ): Promise<GeniusBridgeQuoteResponse> {
-    const url = `${this.baseUrl}${this.quoteEndpoint}`;
-
-    try {
-      const response = await axios.post<GeniusBridgeQuoteResponse>(url, params);
-      return response.data;
-    } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error('Failed to fetch quote from GeniusBridge', errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch GeniusBridge quote: ${errorMessage}`,
       );
     }
   }

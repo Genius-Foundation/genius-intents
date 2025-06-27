@@ -27,6 +27,7 @@ export class AcrossService implements IIntentProtocol {
     ChainIdEnum.POLYGON,
     ChainIdEnum.BASE,
     ChainIdEnum.BLAST,
+    ChainIdEnum.BSC,
   ];
 
   protected acrossClient: AcrossClient;

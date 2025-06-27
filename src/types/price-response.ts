@@ -7,9 +7,9 @@ import { OkxPriceResponse } from '../protocols/okx/okx.types';
 import { AftermathPriceResponse } from '../protocols/aftermath/aftermath.types';
 import { OpenOceanPriceResponse } from '../protocols/openocean/openocean.types';
 import { ZeroXPriceResponse } from '../protocols/zeroX/zeroX.types';
-import { GeniusBridgePriceResponse } from '../protocols/genius-bridge/genius-bridge.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
 import { AcrossQuoteResponse } from '../protocols/across/across.types';
+import { GeniusBridgePriceResponse } from 'genius-bridge-sdk';
 
 export type RawProtocolPriceResponse =
   | OdosPriceResponse
