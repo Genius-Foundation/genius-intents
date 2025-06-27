@@ -1,3 +1,5 @@
+import { DeBridgePriceParams } from '../protocols/debridge/debridge.types';
+
 export type IntentPriceParams = {
   networkIn: number;
   networkOut: number;
@@ -15,4 +17,6 @@ export type IntentPriceParams = {
    */
   slippage: number;
   from: string;
+
+  overrideParamsDebridge?: Partial<DeBridgePriceParams>;
 };
