@@ -8,12 +8,15 @@ export type {
   PermitSignatureParams,
   Permit,
   Authority,
-  GeniusBridgePriceParams,
-  GeniusBridgeQuoteParams,
   EvmArbitraryCall,
   GeniusBridgeFeesBreakdown,
   ApprovalRequired,
+} from './genius-bridge.types';
+
+export {
+  GeniusBridgePriceParams,
+  GeniusBridgeQuoteParams,
   GeniusBaseBridgeResponse,
   GeniusBridgePriceResponse,
   GeniusBridgeQuoteResponse,
-} from './genius-bridge.types';
+} from 'genius-bridge-sdk';

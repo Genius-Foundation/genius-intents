@@ -9,9 +9,9 @@ import { AftermathQuoteResponse } from '../protocols/aftermath/aftermath.types';
 import { OpenOceanQuoteResponse } from '../protocols/openocean/openocean.types';
 import { KyberswapQuoteResponse } from '../protocols/kyberswap/kyberswap.types';
 import { ZeroXQuoteResponse } from '../protocols/zeroX/zeroX.types';
-import { GeniusBridgeQuoteResponse } from '../protocols/genius-bridge/genius-bridge.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
 import { AcrossQuoteResponse } from '../protocols/across/across.types';
+import { GeniusBridgeQuoteResponse } from 'genius-bridge-sdk';
 
 export type QuoteResponse = {
   protocol: ProtocolEnum;
