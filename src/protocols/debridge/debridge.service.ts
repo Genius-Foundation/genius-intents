@@ -140,7 +140,10 @@ export class DeBridgeService implements IIntentProtocol {
     try {
       this.validatePriceParams(params);
       const validatedParams = this.transformPriceParams(params);
-      const dlnQuote = await this.fetchDLNQuote(validatedParams);
+      const dlnQuote = await this.fetchDLNQuote({
+        ...validatedParams,
+        ...params.overrideParamsDebridge,
+      });
 
       logger.debug('Successfully received price info from DeBridge', {
         amountOut: dlnQuote.estimation.dstChainTokenOut.amount,
@@ -188,7 +191,10 @@ export class DeBridgeService implements IIntentProtocol {
     try {
       this.validateQuoteParams(params);
       const validatedParams = this.transformQuoteParams(params);
-      const dlnQuote = await this.fetchDLNQuote(validatedParams);
+      const dlnQuote = await this.fetchDLNQuote({
+        ...validatedParams,
+        ...params.overrideParamsDebridge,
+      });
 
       if (!dlnQuote.tx.data) {
         throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'Invalid DLN quote: Missing transaction data');
@@ -297,15 +303,7 @@ export class DeBridgeService implements IIntentProtocol {
    * @throws {SdkError} If there's an error with the HTTP request to the DeBridge API.
    * @throws {Error} If the DeBridge API returns an error message.
    */
-  protected async fetchDLNQuote(
-    params: DeBridgePriceParams & {
-      to?: string;
-      authority?: {
-        networkInAddress: string;
-        networkOutAddress: string;
-      };
-    },
-  ): Promise<DeBridgeQuoteResponse> {
+  protected async fetchDLNQuote(params: DeBridgePriceParams): Promise<DeBridgeQuoteResponse> {
     const isSourceSolana = isSolanaNetwork(params.networkIn);
     const isDestSolana = isSolanaNetwork(params.networkOut);
     const isSrcSonic = params.networkIn === ChainIdEnum.SONIC;
