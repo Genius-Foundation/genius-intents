@@ -1,5 +1,4 @@
 import { OdosQuoteResponse } from '../protocols/odos/odos.types';
-import { PumpFunQuoteResponse } from '../protocols/pumpfun/pumpfun.types';
 import { RaydiumV2QuoteResponse } from '../protocols/raydium/raydium-v2.types';
 import { JupiterQuoteResponses } from '../protocols/jupiter/jupiter.types';
 import { ProtocolEnum } from './enums';
@@ -34,7 +33,6 @@ export type QuoteResponse = {
 export type RawProtocolQuoteResponse =
   | OdosQuoteResponse
   | RaydiumV2QuoteResponse
-  | PumpFunQuoteResponse
   | JupiterQuoteResponses
   | OkxQuoteResponse
   | AftermathQuoteResponse

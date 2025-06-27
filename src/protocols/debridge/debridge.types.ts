@@ -14,6 +14,11 @@ export type DeBridgePriceParams = {
   amountIn: string;
   slippage: number;
   from: string;
+  to?: string;
+  authority?: {
+    networkInAddress: string;
+    networkOutAddress: string;
+  };
 };
 
 export type DeBridgeQuoteParams = DeBridgePriceParams & {

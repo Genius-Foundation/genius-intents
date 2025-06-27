@@ -26,9 +26,6 @@ function createProtocolInstance(
 
 // Create test configurations for protocols that need them
 const TEST_CONFIGS = {
-  pumpfun: {
-    solanaRpcUrl: 'https://api.mainnet-beta.solana.com',
-  },
   aftermath: {
     suiRpcUrl: 'https://fullnode.mainnet.sui.io:443',
   },
@@ -71,13 +68,7 @@ const PROTOCOL_CANDIDATES = [
       return new RaydiumV2Service();
     },
   },
-  {
-    name: 'PumpFun',
-    createFn: () => {
-      const { PumpFunService } = require('../../src/protocols/pumpfun/pumpfun.service');
-      return new PumpFunService(TEST_CONFIGS.pumpfun);
-    },
-  },
+
   {
     name: 'OpenOcean',
     createFn: () => {
