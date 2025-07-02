@@ -207,7 +207,7 @@ export class GeniusBridgeService implements IIntentProtocol {
     }
 
     // Validate token addresses based on network type
-    if (isSolanaNetwork(networkIn)) {
+    if (isSolanaNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateSolanaAddress(tokenIn);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -225,7 +225,7 @@ export class GeniusBridgeService implements IIntentProtocol {
       }
     }
 
-    if (isSolanaNetwork(networkOut)) {
+    if (isSolanaNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateSolanaAddress(tokenOut);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
