@@ -1,3 +1,27 @@
+## [0.7.0] - 2025-07-02
+
+## [0.7.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.6.0...v0.7.0) (2025-07-02)
+
+
+### Features
+
+* enhance fetchDLNQuote to accept override parameters for improved price fetching ([58cd643](https://github.com/Genius-Foundation/genius-intents/commit/58cd643b726e0db06d2aecc609a8e89e6b4ab368))
+
+
+### Bug Fixes
+
+* update token address validation to account for native tokens in DeBridge and GeniusBridge services ([cb731c2](https://github.com/Genius-Foundation/genius-intents/commit/cb731c22c07ab44457e02125d9d2772bd2ce8a94))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.6.0 ([cf1dd73](https://github.com/Genius-Foundation/genius-intents/commit/cf1dd732b75fa97b431b0aacd1dc81f2a9cf66bf))
+
+
+
+---
+
+
 ## [0.6.0] - 2025-06-27
 
 ## [0.6.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.5.0...v0.6.0) (2025-06-27)
