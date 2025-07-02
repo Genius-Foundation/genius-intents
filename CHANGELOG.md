@@ -1,3 +1,28 @@
+## [0.6.0] - 2025-06-27
+
+## [0.6.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.5.0...v0.6.0) (2025-06-27)
+
+
+### Features
+
+* enhance fetchDLNQuote to accept override parameters for improved price fetching ([d7e6677](https://github.com/Genius-Foundation/genius-intents/commit/d7e66776f8af2feaaf854ad665f59f930c0ec651))
+
+
+### Bug Fixes
+
+* remove pump fun ([bc8dcbe](https://github.com/Genius-Foundation/genius-intents/commit/bc8dcbe49fb3be90e016740bad136445cc2654d4))
+* remove pump fun ([7e2802b](https://github.com/Genius-Foundation/genius-intents/commit/7e2802b60522509d39fb856886af9a7bea3eecad))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.5.0 ([6a3ea11](https://github.com/Genius-Foundation/genius-intents/commit/6a3ea112867aae4aecb5ad2143b3ef2ff26e004d))
+
+
+
+---
+
+
 ## [0.5.0] - 2025-06-27
 
 ## [0.5.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.4.0...v0.5.0) (2025-06-27)
