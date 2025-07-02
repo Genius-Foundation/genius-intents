@@ -20,12 +20,13 @@ import { isEVMNetwork, isSolanaNetwork } from '../../utils/check-vm';
 import { createErrorMessage } from '../../utils/create-error-message';
 import { validateSolanaAddress } from '../../utils/address';
 import { validateAndChecksumEvmAddress } from '../../utils/address-validation';
-import { NATIVE_ADDRESS, ZERO_ADDRESS } from '../../utils/constants';
+import { ZERO_ADDRESS } from '../../utils/constants';
 import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
 } from '../../types/quote-execution-payload';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
 
@@ -410,7 +411,7 @@ export class DeBridgeService implements IIntentProtocol {
     }
 
     // Validate token addresses based on network type
-    if (isSolanaNetwork(networkIn)) {
+    if (isSolanaNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateSolanaAddress(tokenIn);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -418,7 +419,7 @@ export class DeBridgeService implements IIntentProtocol {
         logger.error(`Invalid Solana token address: ${tokenIn}`);
         throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenIn}`);
       }
-    } else if (isEVMNetwork(networkIn) && tokenIn !== NATIVE_ADDRESS) {
+    } else if (isEVMNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateAndChecksumEvmAddress(tokenIn);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -428,7 +429,7 @@ export class DeBridgeService implements IIntentProtocol {
       }
     }
 
-    if (isSolanaNetwork(networkOut)) {
+    if (isSolanaNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateSolanaAddress(tokenOut);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -436,7 +437,7 @@ export class DeBridgeService implements IIntentProtocol {
         logger.error(`Invalid Solana token address: ${tokenOut}`);
         throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenOut}`);
       }
-    } else if (isEVMNetwork(networkOut) && tokenOut !== NATIVE_ADDRESS) {
+    } else if (isEVMNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateAndChecksumEvmAddress(tokenOut);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -490,7 +491,7 @@ export class DeBridgeService implements IIntentProtocol {
     // Handle token address transformation
     if (isSolanaNetwork(networkIn)) {
       networkIn = this.solanaChainIdEnum;
-    } else if (tokenIn === NATIVE_ADDRESS) {
+    } else if (isNative(tokenIn)) {
       tokenIn = ZERO_ADDRESS;
     } else {
       tokenIn = validateAndChecksumEvmAddress(tokenIn);
@@ -498,7 +499,7 @@ export class DeBridgeService implements IIntentProtocol {
 
     if (isSolanaNetwork(networkOut)) {
       networkOut = this.solanaChainIdEnum;
-    } else if (tokenOut === NATIVE_ADDRESS) {
+    } else if (isNative(tokenOut)) {
       tokenOut = ZERO_ADDRESS;
     } else {
       tokenOut = validateAndChecksumEvmAddress(tokenOut);
