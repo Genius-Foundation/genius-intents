@@ -1,6 +1,5 @@
 export type JupiterConfig = {
   jupiterPrivateUrl?: string;
-  jupiterMaxAccounts?: number;
   jupiterPriceOverrides?: Partial<JupiterPriceUrlParams>;
   jupiterSwapOverrides?: Partial<JupiterSwapUrlParams>;
 };

@@ -34,7 +34,6 @@ export class JupiterService implements IIntentProtocol {
   public readonly assemblyEndpoint: string = '/swap';
 
   public baseUrl: string;
-  public maxAccounts: number;
   public priceOverrides: Partial<JupiterPriceUrlParams> | null = null;
   public swapOverrides: Partial<JupiterSwapUrlParams> | null = null;
 
@@ -56,7 +55,6 @@ export class JupiterService implements IIntentProtocol {
     }
     // Jupiter API endpoint
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
-    this.maxAccounts = config?.jupiterMaxAccounts || 16;
   }
 
   isCorrectConfig<T extends { [key: string]: string }>(_config: {
