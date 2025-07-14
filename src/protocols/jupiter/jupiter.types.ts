@@ -1,6 +1,8 @@
 export type JupiterConfig = {
   jupiterPrivateUrl?: string;
   jupiterMaxAccounts?: number;
+  jupiterPriceOverrides?: Partial<JupiterPriceUrlParams>
+  jupiterSwapOverrides?: Partial<JupiterSwapUrlParams>
 };
 
 export type JupiterSwapPlatformFee = {
@@ -201,30 +203,30 @@ export type JupiterSwapUrlParams = {
    * Can be set to 0 to skip adding priority fees
    */
   prioritizationFeeLamports?:
-    | {
-        /**
-         * Sets a priority level with a maximum lamport cap
-         */
-        priorityLevelWithMaxLamports?: {
-          /**
-           * Priority level for transaction processing
-           */
-          priorityLevel: 'medium' | 'high' | 'veryHigh';
+  | {
+    /**
+     * Sets a priority level with a maximum lamport cap
+     */
+    priorityLevelWithMaxLamports?: {
+      /**
+       * Priority level for transaction processing
+       */
+      priorityLevel: 'medium' | 'high' | 'veryHigh';
 
-          /**
-           * Maximum lamports to cap the priority fee estimation
-           * Prevents overpaying for transaction priority
-           */
-          maxLamports: number;
-        };
+      /**
+       * Maximum lamports to cap the priority fee estimation
+       * Prevents overpaying for transaction priority
+       */
+      maxLamports: number;
+    };
 
-        /**
-         * Exact amount of tip to use in a Jito tip instruction
-         * Must be used with a connection to a Jito RPC
-         */
-        jitoTipLamports?: number;
-      }
-    | number;
+    /**
+     * Exact amount of tip to use in a Jito tip instruction
+     * Must be used with a connection to a Jito RPC
+     */
+    jitoTipLamports?: number;
+  }
+  | number;
 
   /**
    * Builds a legacy transaction rather than the default versioned transaction
