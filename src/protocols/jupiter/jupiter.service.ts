@@ -35,8 +35,8 @@ export class JupiterService implements IIntentProtocol {
 
   public baseUrl: string;
   public maxAccounts: number;
-  public priceOverrides: Partial<JupiterPriceUrlParams> | null = null
-  public swapOverrides: Partial<JupiterSwapUrlParams> | null = null
+  public priceOverrides: Partial<JupiterPriceUrlParams> | null = null;
+  public swapOverrides: Partial<JupiterSwapUrlParams> | null = null;
 
   constructor(config?: GeniusIntentsSDKConfig & JupiterConfig) {
     if (config?.debug) {
@@ -49,10 +49,10 @@ export class JupiterService implements IIntentProtocol {
     logger = LoggerFactory.getLogger();
 
     if (config?.jupiterSwapOverrides) {
-      this.swapOverrides = config?.jupiterSwapOverrides
+      this.swapOverrides = config?.jupiterSwapOverrides;
     }
     if (config?.jupiterPriceOverrides) {
-      this.priceOverrides = config?.jupiterPriceOverrides
+      this.priceOverrides = config?.jupiterPriceOverrides;
     }
     // Jupiter API endpoint
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
@@ -74,15 +74,15 @@ export class JupiterService implements IIntentProtocol {
 
     try {
       const requestParams = {
-        ...(this.priceParamsToRequestParams({
+        ...this.priceParamsToRequestParams({
           tokenIn: params.tokenIn,
           tokenOut: params.tokenOut,
           amountIn: params.amountIn,
           slippage: params.slippage,
           from: params.from,
-        })),
-        ...(this.priceOverrides ? this.priceOverrides : {})
-      }
+        }),
+        ...(this.priceOverrides ? this.priceOverrides : {}),
+      };
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
         `${this.baseUrl}${this.priceEndpoint}`,
@@ -146,7 +146,7 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
-        ...(this.swapOverrides ? this.swapOverrides : {})
+        ...(this.swapOverrides ? this.swapOverrides : {}),
       };
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
@@ -181,8 +181,8 @@ export class JupiterService implements IIntentProtocol {
       const errorMessage =
         error instanceof AxiosError
           ? error?.response?.data?.error ||
-          error?.response?.data?.detail ||
-          error?.response?.data?.message
+            error?.response?.data?.detail ||
+            error?.response?.data?.message
           : error instanceof Error
             ? error.message
             : String(error);
