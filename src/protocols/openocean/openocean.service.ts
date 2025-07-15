@@ -76,7 +76,7 @@ export class OpenOceanService implements IIntentProtocol {
       const queryParams = {
         inTokenAddress: params.tokenIn,
         outTokenAddress: params.tokenOut,
-        amount: params.amountIn,
+        amountDecimals: params.amountIn,
         disabledDexIds: this.disabledDexIds,
         enabledDexIds: this.enabledDexIds,
         gasPrice: 1,
@@ -142,7 +142,7 @@ export class OpenOceanService implements IIntentProtocol {
       const queryParams = {
         inTokenAddress: tokenIn,
         outTokenAddress: tokenOut,
-        amount: amountIn,
+        amountDecimals: amountIn,
         gasPrice: 1, // Default gas price, could be made configurable
         slippage: slippage.toString(),
         account: from,
