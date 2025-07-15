@@ -1,7 +1,5 @@
 export type JupiterConfig = {
   jupiterPrivateUrl?: string;
-  jupiterPriceOverrides?: Partial<JupiterPriceUrlParams>;
-  jupiterSwapOverrides?: Partial<JupiterSwapUrlParams>;
 };
 
 export type JupiterSwapPlatformFee = {

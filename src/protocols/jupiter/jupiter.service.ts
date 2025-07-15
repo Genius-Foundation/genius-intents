@@ -15,7 +15,6 @@ import {
   JupiterConfig,
   JupiterPriceResponse,
   JupiterPriceUrlParams,
-  JupiterSwapUrlParams,
   JupiterTransactionData,
 } from './jupiter.types';
 import { VersionedTransaction } from '@solana/web3.js';
@@ -34,8 +33,6 @@ export class JupiterService implements IIntentProtocol {
   public readonly assemblyEndpoint: string = '/swap';
 
   public baseUrl: string;
-  public priceOverrides: Partial<JupiterPriceUrlParams> | null = null;
-  public swapOverrides: Partial<JupiterSwapUrlParams> | null = null;
 
   constructor(config?: GeniusIntentsSDKConfig & JupiterConfig) {
     if (config?.debug) {
@@ -47,12 +44,6 @@ export class JupiterService implements IIntentProtocol {
     }
     logger = LoggerFactory.getLogger();
 
-    if (config?.jupiterSwapOverrides) {
-      this.swapOverrides = config?.jupiterSwapOverrides;
-    }
-    if (config?.jupiterPriceOverrides) {
-      this.priceOverrides = config?.jupiterPriceOverrides;
-    }
     // Jupiter API endpoint
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
   }
@@ -79,7 +70,7 @@ export class JupiterService implements IIntentProtocol {
           slippage: params.slippage,
           from: params.from,
         }),
-        ...(this.priceOverrides ? this.priceOverrides : {}),
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
@@ -144,7 +135,7 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
-        ...(this.swapOverrides ? this.swapOverrides : {}),
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
