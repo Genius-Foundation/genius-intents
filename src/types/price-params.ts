@@ -1,4 +1,5 @@
 import { DeBridgePriceParams } from '../protocols/debridge/debridge.types';
+import { JupiterPriceUrlParams } from '../protocols/jupiter';
 
 export type IntentPriceParams = {
   networkIn: number;
@@ -6,6 +7,7 @@ export type IntentPriceParams = {
   tokenIn: string;
   tokenOut: string;
   amountIn: string;
+  from: string;
 
   /**
    * Slippage is the maximum allowed price deviation from the best price.
@@ -16,7 +18,9 @@ export type IntentPriceParams = {
    * If the price is 99.5, the swap will succeed.
    */
   slippage: number;
-  from: string;
+
+  // overide parameters for specific protocols
 
   overrideParamsDebridge?: Partial<DeBridgePriceParams>;
+  overrideParamsJupiter?: Partial<JupiterPriceUrlParams>;
 };
