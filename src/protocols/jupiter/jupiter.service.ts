@@ -33,7 +33,6 @@ export class JupiterService implements IIntentProtocol {
   public readonly assemblyEndpoint: string = '/swap';
 
   public baseUrl: string;
-  public maxAccounts: number;
 
   constructor(config?: GeniusIntentsSDKConfig & JupiterConfig) {
     if (config?.debug) {
@@ -47,7 +46,6 @@ export class JupiterService implements IIntentProtocol {
 
     // Jupiter API endpoint
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
-    this.maxAccounts = config?.jupiterMaxAccounts || 16;
   }
 
   isCorrectConfig<T extends { [key: string]: string }>(_config: {
@@ -64,13 +62,16 @@ export class JupiterService implements IIntentProtocol {
     }
 
     try {
-      const requestParams = this.priceParamsToRequestParams({
-        tokenIn: params.tokenIn,
-        tokenOut: params.tokenOut,
-        amountIn: params.amountIn,
-        slippage: params.slippage,
-        from: params.from,
-      });
+      const requestParams = {
+        ...this.priceParamsToRequestParams({
+          tokenIn: params.tokenIn,
+          tokenOut: params.tokenOut,
+          amountIn: params.amountIn,
+          slippage: params.slippage,
+          from: params.from,
+        }),
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
+      };
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
         `${this.baseUrl}${this.priceEndpoint}`,
@@ -134,6 +135,7 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
