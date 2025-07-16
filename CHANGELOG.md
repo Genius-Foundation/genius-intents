@@ -1,3 +1,27 @@
+## [0.8.0] - 2025-07-16
+
+## [0.8.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.7.0...v0.8.0) (2025-07-16)
+
+
+### Features
+
+* add jupiter override params ([#35](https://github.com/Genius-Foundation/genius-intents/issues/35)) ([e3156b6](https://github.com/Genius-Foundation/genius-intents/commit/e3156b60ef168ee8cb4961e96691c77e38c27d39))
+
+
+### Bug Fixes
+
+* openocean v4 use of amountDecimals ([#36](https://github.com/Genius-Foundation/genius-intents/issues/36)) ([e2427c3](https://github.com/Genius-Foundation/genius-intents/commit/e2427c39c6e8965fc7f80fe0e9bb8e02170654e4))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.7.0 ([77f0487](https://github.com/Genius-Foundation/genius-intents/commit/77f0487bdb9d6dfa4a34265cadec29e4bc29db8f))
+
+
+
+---
+
+
 ## [0.7.0] - 2025-07-02
 
 ## [0.7.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.6.0...v0.7.0) (2025-07-02)
