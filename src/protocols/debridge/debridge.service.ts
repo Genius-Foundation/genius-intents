@@ -133,7 +133,7 @@ export class DeBridgeService implements IIntentProtocol {
    * @returns {Promise<PriceResponse>} A promise that resolves to a `PriceResponse` object containing:
    * - The amount of output tokens expected from the swap.
    * - The raw response from the DeBridge API.
-   *
+   *  
    * @throws {SdkError} If the parameters are invalid or unsupported.
    * @throws {SdkError} If there's an error fetching the price from DeBridge.
    */

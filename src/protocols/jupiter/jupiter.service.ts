@@ -70,7 +70,7 @@ export class JupiterService implements IIntentProtocol {
           slippage: params.slippage,
           from: params.from,
         }),
-        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
+        ...(params.overridePriceParamsJupiter ? params.overridePriceParamsJupiter : {}),
       };
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
