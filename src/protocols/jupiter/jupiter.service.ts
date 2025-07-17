@@ -70,7 +70,7 @@ export class JupiterService implements IIntentProtocol {
           slippage: params.slippage,
           from: params.from,
         }),
-        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
+        ...(params.overridePriceParamsJupiter ? params.overridePriceParamsJupiter : {}),
       };
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
@@ -135,7 +135,7 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
-        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
+        ...(params.overrideQuoteParamsJupiter ? params.overrideQuoteParamsJupiter : {}),
       };
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
