@@ -7,5 +7,5 @@ export type IntentQuoteParams = IntentPriceParams & {
   priceResponse?: PriceResponse;
 
   // overide parameters for specific protocols
-  overrideParamsJupiter?: Partial<JupiterSwapUrlParams>;
+  overrideQuoteParamsJupiter?: Partial<JupiterSwapUrlParams>;
 };

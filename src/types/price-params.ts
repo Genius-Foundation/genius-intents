@@ -22,5 +22,5 @@ export type IntentPriceParams = {
   // overide parameters for specific protocols
 
   overrideParamsDebridge?: Partial<DeBridgePriceParams>;
-  overrideParamsJupiter?: Partial<JupiterPriceUrlParams>;
+  overridePriceParamsJupiter?: Partial<JupiterPriceUrlParams>;
 };
