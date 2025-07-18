@@ -1,3 +1,65 @@
+## [0.8.1] - 2025-07-17
+
+### [0.8.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.0...v0.8.1) (2025-07-17)
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.8.0 ([fc759fd](https://github.com/Genius-Foundation/genius-intents/commit/fc759fdda9cc54045299d96a56bc2f8a6aab4470))
+
+
+
+---
+
+
+## [0.8.0] - 2025-07-16
+
+## [0.8.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.7.0...v0.8.0) (2025-07-16)
+
+
+### Features
+
+* add jupiter override params ([#35](https://github.com/Genius-Foundation/genius-intents/issues/35)) ([e3156b6](https://github.com/Genius-Foundation/genius-intents/commit/e3156b60ef168ee8cb4961e96691c77e38c27d39))
+
+
+### Bug Fixes
+
+* openocean v4 use of amountDecimals ([#36](https://github.com/Genius-Foundation/genius-intents/issues/36)) ([e2427c3](https://github.com/Genius-Foundation/genius-intents/commit/e2427c39c6e8965fc7f80fe0e9bb8e02170654e4))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.7.0 ([77f0487](https://github.com/Genius-Foundation/genius-intents/commit/77f0487bdb9d6dfa4a34265cadec29e4bc29db8f))
+
+
+
+---
+
+
+## [0.7.0] - 2025-07-02
+
+## [0.7.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.6.0...v0.7.0) (2025-07-02)
+
+
+### Features
+
+* enhance fetchDLNQuote to accept override parameters for improved price fetching ([58cd643](https://github.com/Genius-Foundation/genius-intents/commit/58cd643b726e0db06d2aecc609a8e89e6b4ab368))
+
+
+### Bug Fixes
+
+* update token address validation to account for native tokens in DeBridge and GeniusBridge services ([cb731c2](https://github.com/Genius-Foundation/genius-intents/commit/cb731c22c07ab44457e02125d9d2772bd2ce8a94))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.6.0 ([cf1dd73](https://github.com/Genius-Foundation/genius-intents/commit/cf1dd732b75fa97b431b0aacd1dc81f2a9cf66bf))
+
+
+
+---
+
+
 ## [0.6.0] - 2025-06-27
 
 ## [0.6.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.5.0...v0.6.0) (2025-06-27)
