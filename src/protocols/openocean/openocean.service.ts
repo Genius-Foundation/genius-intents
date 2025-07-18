@@ -199,14 +199,14 @@ export class OpenOceanService implements IIntentProtocol {
             VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
           );
         } else {
-           const legacyTransaction = Transaction.from(Buffer.from(quoteData.data, 'hex'))
-           const versionedTransaction = new VersionedTransaction(
-             new TransactionMessage({
-               payerKey: new PublicKey(from),
-               instructions: legacyTransaction.instructions,
-               recentBlockhash: legacyTransaction.recentBlockhash as string,
-             }).compileToV0Message(),
-           );
+          const legacyTransaction = Transaction.from(Buffer.from(quoteData.data, 'hex'));
+          const versionedTransaction = new VersionedTransaction(
+            new TransactionMessage({
+              payerKey: new PublicKey(from),
+              instructions: legacyTransaction.instructions,
+              recentBlockhash: legacyTransaction.recentBlockhash as string,
+            }).compileToV0Message(),
+          );
           swapTransaction = bs58.encode(versionedTransaction.serialize());
         }
 

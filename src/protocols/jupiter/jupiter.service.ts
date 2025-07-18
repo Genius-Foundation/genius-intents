@@ -74,7 +74,10 @@ export class JupiterService implements IIntentProtocol {
       };
 
       // Construct and log the full URL with query parameters
-      const urlParams = new URLSearchParams(requestParams as any).toString();
+      const stringParams: Record<string, string> = Object.fromEntries(
+        Object.entries(requestParams).map(([k, v]) => [k, String(v)])
+      );
+      const urlParams = new URLSearchParams(stringParams).toString();
       const fullUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
       logger.debug(`Jupiter Price URL: ${fullUrl}`);
 
@@ -154,7 +157,9 @@ export class JupiterService implements IIntentProtocol {
         swapParams,
       );
 
-      logger.debug(`Jupiter Quote Response: ${JSON.stringify(swapTransactionResponse.data, null, 2)}`);
+      logger.debug(
+        `Jupiter Quote Response: ${JSON.stringify(swapTransactionResponse.data, null, 2)}`,
+      );
 
       //will throw if transaction is too large
       swapTransactionResponse.data.swapTransaction = bs58.encode(
