@@ -70,13 +70,22 @@ export class JupiterService implements IIntentProtocol {
           slippage: params.slippage,
           from: params.from,
         }),
-        ...(params.overridePriceParamsJupiter ? params.overridePriceParamsJupiter : {}),
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
+
+      // Construct and log the full URL with query parameters
+      const stringParams: Record<string, string> = Object.fromEntries(
+        Object.entries(requestParams).map(([k, v]) => [k, String(v)]),
+      );
+      const urlParams = new URLSearchParams(stringParams).toString();
+      const fullUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
+      logger.debug(`Jupiter Price URL: ${fullUrl}`);
 
       const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
         `${this.baseUrl}${this.priceEndpoint}`,
         { params: requestParams },
       );
+      logger.debug(`Jupiter API response`, response.data);
 
       const priceData = response.data;
 
@@ -135,12 +144,21 @@ export class JupiterService implements IIntentProtocol {
       const swapParams = {
         quoteResponse: priceResponse.protocolResponse,
         userPublicKey: from,
-        ...(params.overrideQuoteParamsJupiter ? params.overrideQuoteParamsJupiter : {}),
+        ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
+
+      // Log the full quote (swap) URL and body
+      const quoteUrl = `${this.baseUrl}${this.assemblyEndpoint}`;
+      logger.debug(`Jupiter Quote URL: ${quoteUrl}`);
+      logger.debug(`Jupiter Quote Body: ${JSON.stringify(swapParams, null, 2)}`);
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
         `${this.baseUrl}${this.assemblyEndpoint}`,
         swapParams,
+      );
+
+      logger.debug(
+        `Jupiter Quote Response: ${JSON.stringify(swapTransactionResponse.data, null, 2)}`,
       );
 
       //will throw if transaction is too large
