@@ -12,7 +12,7 @@ import { OpenOceanConfig, OpenOceanPriceResponse, OpenOceanQuoteResponse } from 
 import { createErrorMessage } from '../../utils/create-error-message';
 import axios from 'axios';
 import bs58 from 'bs58';
-import { VersionedTransaction } from '@solana/web3.js';
+import { PublicKey, Transaction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
@@ -193,9 +193,23 @@ export class OpenOceanService implements IIntentProtocol {
       let solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = undefined;
 
       if (isSolanaNetwork(networkIn) && quoteData.data) {
-        const swapTransaction = bs58.encode(
-          VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
-        );
+        let swapTransaction: string;
+        if (quoteData.dexId == 6 || quoteData.dexId == 7 || quoteData.dexId == 9) {
+          swapTransaction = bs58.encode(
+            VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
+          );
+        } else {
+           const legacyTransaction = Transaction.from(Buffer.from(quoteData.data, 'hex'))
+           const versionedTransaction = new VersionedTransaction(
+             new TransactionMessage({
+               payerKey: new PublicKey(from),
+               instructions: legacyTransaction.instructions,
+               recentBlockhash: legacyTransaction.recentBlockhash as string,
+             }).compileToV0Message(),
+           );
+          swapTransaction = bs58.encode(versionedTransaction.serialize());
+        }
+
         solanaExecutionPayload = [swapTransaction];
       }
 

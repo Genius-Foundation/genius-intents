@@ -71,4 +71,5 @@ export type OpenOceanQuoteResponse = {
   gmxFee?: number;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   price_impact?: string;
+  dexId: number;
 };

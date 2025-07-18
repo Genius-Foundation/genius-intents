@@ -1,5 +1,5 @@
 import { DeBridgePriceParams } from '../protocols/debridge/debridge.types';
-import { JupiterPriceUrlParams } from '../protocols/jupiter';
+import { JupiterPriceUrlParams, JupiterSwapUrlParams } from '../protocols/jupiter';
 
 export type IntentPriceParams = {
   networkIn: number;
@@ -22,5 +22,5 @@ export type IntentPriceParams = {
   // overide parameters for specific protocols
 
   overrideParamsDebridge?: Partial<DeBridgePriceParams>;
-  overridePriceParamsJupiter?: Partial<JupiterPriceUrlParams>;
+  overrideParamsJupiter?: Partial<JupiterPriceUrlParams & JupiterSwapUrlParams>;
 };
