@@ -75,7 +75,7 @@ export class JupiterService implements IIntentProtocol {
 
       // Construct and log the full URL with query parameters
       const stringParams: Record<string, string> = Object.fromEntries(
-        Object.entries(requestParams).map(([k, v]) => [k, String(v)])
+        Object.entries(requestParams).map(([k, v]) => [k, String(v)]),
       );
       const urlParams = new URLSearchParams(stringParams).toString();
       const fullUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
