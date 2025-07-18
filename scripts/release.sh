@@ -71,39 +71,22 @@ npm run format:check
 npm run test
 npm run build:clean
 
-# Get current version and calculate next version
+# Get current version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${BLUE}📋 Current version: ${CURRENT_VERSION}${NC}"
 
-# Calculate next version based on release type
+# For stable releases, we'll let the GitHub Action determine the exact version
+# based on semantic versioning and conventional commits
 if [[ "$RELEASE_TYPE" == "beta" ]]; then
+    # Beta releases get a timestamp suffix
     NEXT_VERSION="${CURRENT_VERSION}-beta.$(date +%Y%m%d%H%M%S)"
+    echo -e "${BLUE}📋 Beta version will be: ${NEXT_VERSION}${NC}"
 else
-    # Split version into components
-    IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-    MAJOR="${VERSION_PARTS[0]}"
-    MINOR="${VERSION_PARTS[1]}"
-    PATCH="${VERSION_PARTS[2]}"
-
-    # Calculate next version based on release type
-    case "$RELEASE_TYPE" in
-        "major")
-            NEXT_VERSION="$((MAJOR + 1)).0.0"
-            ;;
-        "minor")
-            NEXT_VERSION="${MAJOR}.$((MINOR + 1)).0"
-            ;;
-        "patch")
-            NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-            ;;
-        *)
-            echo -e "${RED}❌ Error: Invalid release type: ${RELEASE_TYPE}${NC}"
-            exit 1
-            ;;
-    esac
+    # For stable releases, we'll use a placeholder that the GitHub Action will replace
+    # The action will determine the exact version based on conventional commits
+    echo -e "${BLUE}📋 Version will be determined by GitHub Action based on conventional commits${NC}"
+    echo -e "${BLUE}📋 Expected bump type: ${RELEASE_TYPE}${NC}"
 fi
-
-echo -e "${BLUE}📋 Next version will be: ${NEXT_VERSION}${NC}"
 
 # Determine workflow based on release type
 if [[ "$RELEASE_TYPE" == "beta" ]]; then
@@ -130,7 +113,7 @@ This PR prepares a beta release from the develop branch.
 
 ## What happens when merged:
 1. GitHub Actions will automatically:
-   - Generate version number with beta suffix
+   - Use the specified beta version: ${NEXT_VERSION}
    - Create changelog from commit history and PRs
    - Create git tag
    - Publish to NPM with \`beta\` tag
@@ -181,38 +164,41 @@ else
     # Capitalize release type for display
     RELEASE_TYPE_CAPITALIZED="$(echo ${RELEASE_TYPE:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${RELEASE_TYPE:1})"
     
-    # Create release branch with version number
-    RELEASE_BRANCH="release/v${NEXT_VERSION}"
+    # Create release branch with generic name (version will be determined by GitHub Action)
+    RELEASE_BRANCH="release/${RELEASE_TYPE}-$(date +%Y%m%d%H%M%S)"
     echo -e "${BLUE}🌿 Creating stable release branch: ${RELEASE_BRANCH}${NC}"
     git checkout -b $RELEASE_BRANCH
     
     # Create temporary commit to mark release intent
-    git commit --allow-empty -m "chore: bump version to ${NEXT_VERSION}"
+    # The GitHub Action will look for this pattern to trigger
+    git commit --allow-empty -m "release/${RELEASE_TYPE}"
     
     # Push release branch
     echo -e "${BLUE}📤 Pushing stable release branch...${NC}"
     git push origin $RELEASE_BRANCH
     
     # Create PR from release branch to main
-    PR_TITLE="🚀 ${RELEASE_TYPE_CAPITALIZED} Release v${NEXT_VERSION}"
-    PR_BODY="🚀 **${RELEASE_TYPE_CAPITALIZED} Release v${NEXT_VERSION}**
+    PR_TITLE="🚀 ${RELEASE_TYPE_CAPITALIZED} Release"
+    PR_BODY="🚀 **${RELEASE_TYPE_CAPITALIZED} Release**
 
 This PR contains a ${RELEASE_TYPE} release from the develop branch.
 
 ## What happens when merged to main:
 1. GitHub Actions will automatically:
-   - Generate new version number (${RELEASE_TYPE} bump)
+   - Analyze conventional commits to determine exact version bump (${RELEASE_TYPE})
+   - Generate new version number based on semantic versioning
    - Create comprehensive changelog from commit history and PRs
    - Create git tag
    - Update package.json version
    - Update CHANGELOG.md file
    - Publish to NPM with \`latest\` tag
    - Create GitHub release
-   - Create sync PR back to develop
+   - Push changes directly back to develop (no sync PR needed)
 
 ## Release Type
 - ${RELEASE_TYPE_CAPITALIZED} release (will be published to NPM with \`latest\` tag)
 - All features and fixes from develop branch (frozen at release branch creation)
+- Version determined by conventional commits and semantic versioning
 
 ## Installation after release:
 \`\`\`bash
@@ -222,7 +208,7 @@ npm install genius-intents@latest
 ## Next Steps
 1. Review and merge this PR to main
 2. The release will be automatically published via GitHub Actions with full changelog
-3. Main will be synced back to develop automatically
+3. Main will be automatically synced back to develop
 
 ## Changelog Preview
 The final changelog will be automatically generated from:
