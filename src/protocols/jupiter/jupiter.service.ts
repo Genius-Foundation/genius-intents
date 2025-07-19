@@ -73,19 +73,15 @@ export class JupiterService implements IIntentProtocol {
         ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
-      // Construct and log the full URL with query parameters
-      const stringParams: Record<string, string> = Object.fromEntries(
-        Object.entries(requestParams).map(([k, v]) => [k, String(v)]),
-      );
-      const urlParams = new URLSearchParams(stringParams).toString();
-      const fullUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
-      logger.debug(`Jupiter Price URL: ${fullUrl}`);
+      // Log the full quote (swap) URL and body
+      const priceUrl = `${this.baseUrl}${this.priceEndpoint}`;
+      logger.debug(`Jupiter Price URL: ${priceUrl}`);
+      logger.debug(`Jupiter Price Body: ${JSON.stringify(requestParams)}`);
 
-      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(
-        `${this.baseUrl}${this.priceEndpoint}`,
-        { params: requestParams },
-      );
-      logger.debug(`Jupiter API response`, response.data);
+      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(priceUrl, {
+        params: requestParams,
+      });
+      logger.debug(`Jupiter API response: ${JSON.stringify(response.data)}`);
 
       const priceData = response.data;
 
@@ -150,16 +146,14 @@ export class JupiterService implements IIntentProtocol {
       // Log the full quote (swap) URL and body
       const quoteUrl = `${this.baseUrl}${this.assemblyEndpoint}`;
       logger.debug(`Jupiter Quote URL: ${quoteUrl}`);
-      logger.debug(`Jupiter Quote Body: ${JSON.stringify(swapParams, null, 2)}`);
+      logger.debug(`Jupiter Quote Body: ${JSON.stringify(swapParams)}`);
 
       const swapTransactionResponse = await axios.post<JupiterTransactionData>(
-        `${this.baseUrl}${this.assemblyEndpoint}`,
+        quoteUrl,
         swapParams,
       );
 
-      logger.debug(
-        `Jupiter Quote Response: ${JSON.stringify(swapTransactionResponse.data, null, 2)}`,
-      );
+      logger.debug(`Jupiter Quote Response: ${JSON.stringify(swapTransactionResponse.data)}`);
 
       //will throw if transaction is too large
       swapTransactionResponse.data.swapTransaction = bs58.encode(
