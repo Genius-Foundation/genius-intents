@@ -12,11 +12,12 @@ import { OpenOceanConfig, OpenOceanPriceResponse, OpenOceanQuoteResponse } from 
 import { createErrorMessage } from '../../utils/create-error-message';
 import axios from 'axios';
 import bs58 from 'bs58';
-import { VersionedTransaction } from '@solana/web3.js';
+import { PublicKey, Transaction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
 } from '../../types/quote-execution-payload';
+import { NATIVE_SOL, WRAPPED_SOL } from '../../utils/constants';
 
 let logger: ILogger;
 export class OpenOceanService implements IIntentProtocol {
@@ -74,8 +75,8 @@ export class OpenOceanService implements IIntentProtocol {
     try {
       const url = `${this.baseUrl}/${this.apiVersion}/${queryNetwork}/quote`;
       const queryParams = {
-        inTokenAddress: params.tokenIn,
-        outTokenAddress: params.tokenOut,
+        inTokenAddress: params.tokenIn === NATIVE_SOL ? WRAPPED_SOL : params.tokenIn,
+        outTokenAddress: params.tokenOut === NATIVE_SOL ? WRAPPED_SOL : params.tokenOut,
         amountDecimals: params.amountIn,
         disabledDexIds: this.disabledDexIds,
         enabledDexIds: this.enabledDexIds,
@@ -140,8 +141,8 @@ export class OpenOceanService implements IIntentProtocol {
       const url = `${this.baseUrl}/${this.apiVersion}/${queryNetwork}/swap`;
 
       const queryParams = {
-        inTokenAddress: tokenIn,
-        outTokenAddress: tokenOut,
+        inTokenAddress: tokenIn === NATIVE_SOL ? WRAPPED_SOL : tokenIn,
+        outTokenAddress: tokenOut === NATIVE_SOL ? WRAPPED_SOL : tokenOut,
         amountDecimals: amountIn,
         gasPrice: 1, // Default gas price, could be made configurable
         slippage: slippage.toString(),
@@ -193,9 +194,29 @@ export class OpenOceanService implements IIntentProtocol {
       let solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = undefined;
 
       if (isSolanaNetwork(networkIn) && quoteData.data) {
-        const swapTransaction = bs58.encode(
-          VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
-        );
+        let swapTransaction: string;
+        try {
+          swapTransaction = bs58.encode(
+            VersionedTransaction.deserialize(Buffer.from(quoteData.data, 'hex')).serialize(),
+          );
+        } catch (error) {
+          logger.debug(
+            'Failed to deserialize as versioned transaction, trying legacy transaction',
+            {
+              error,
+            },
+          );
+          const legacyTransaction = Transaction.from(Buffer.from(quoteData.data, 'hex'));
+          const versionedTransaction = new VersionedTransaction(
+            new TransactionMessage({
+              payerKey: new PublicKey(from),
+              instructions: legacyTransaction.instructions,
+              recentBlockhash: legacyTransaction.recentBlockhash as string,
+            }).compileToV0Message(),
+          );
+          swapTransaction = bs58.encode(versionedTransaction.serialize());
+        }
+
         solanaExecutionPayload = [swapTransaction];
       }
 
