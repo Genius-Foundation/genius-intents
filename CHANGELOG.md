@@ -1,3 +1,22 @@
+## [0.8.3] - 2025-07-25
+
+### [0.8.3](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.2...v0.8.3) (2025-07-25)
+
+
+### Code Refactoring
+
+* streamline release workflow and versioning process ([d0f0ee2](https://github.com/Genius-Foundation/genius-intents/commit/d0f0ee2fa0edc91f5bdafc79aa7a04b96e376403))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.8.1 ([e4f3150](https://github.com/Genius-Foundation/genius-intents/commit/e4f3150f991077253adc80559003e642a855a4d1))
+
+
+
+---
+
+
 ## [0.8.1] - 2025-07-17
 
 ### [0.8.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.0...v0.8.1) (2025-07-17)
