@@ -77,14 +77,11 @@ export class JupiterService implements IIntentProtocol {
         Object.entries(requestParams).map(([k, v]) => [k, String(v)]),
       );
       const urlParams = new URLSearchParams(stringParams).toString();
-      const fullUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
-      logger.debug(`Jupiter Price URL: ${fullUrl}`);
-
+      const priceUrl = `${this.baseUrl}${this.priceEndpoint}?${urlParams}`;
       // Log the full quote (swap) URL and body
-      const priceUrl = `${this.baseUrl}${this.priceEndpoint}`;
-      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(priceUrl, {
-        params: requestParams,
-      });
+      logger.debug(`Jupiter Price URL: ${priceUrl}`);
+
+      const response = await axios.get<JupiterPriceResponse | { error: unknown }>(priceUrl);
       logger.debug(`Jupiter API response: ${JSON.stringify(response.data, null, 2)}`);
 
       const priceData = response.data;
