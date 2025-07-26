@@ -1,3 +1,17 @@
+## [0.8.4] - 2025-07-26
+
+### [0.8.4](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.3...v0.8.4) (2025-07-26)
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.8.3 ([1fd540d](https://github.com/Genius-Foundation/genius-intents/commit/1fd540d665c673a51ae11ebbcad12336416b2eff))
+
+
+
+---
+
+
 ## [0.8.3] - 2025-07-25
 
 ### [0.8.3](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.2...v0.8.3) (2025-07-25)
