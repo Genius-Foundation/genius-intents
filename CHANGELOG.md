@@ -1,3 +1,22 @@
+## [0.9.0] - 2025-07-29
+
+## [0.9.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.4...v0.9.0) (2025-07-29)
+
+
+### Features
+
+* add quote simulation functionality for EVM and SVM  ([#47](https://github.com/Genius-Foundation/genius-intents/issues/47)) ([df6ebb0](https://github.com/Genius-Foundation/genius-intents/commit/df6ebb0a0514bfde2c51df31622e59ea50cd6515))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.8.4 ([9b03643](https://github.com/Genius-Foundation/genius-intents/commit/9b03643eb0fae4a92b55ca0d01713dd7083e0472))
+
+
+
+---
+
+
 ## [0.8.4] - 2025-07-26
 
 ### [0.8.4](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.3...v0.8.4) (2025-07-26)
