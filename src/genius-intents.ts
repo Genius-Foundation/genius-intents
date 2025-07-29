@@ -72,7 +72,12 @@ export class GeniusIntents {
         ...(config.excludeProtocols || []),
         ...(config.includeProtocols ? [] : [ProtocolEnum.GENIUS_BRIDGE]), // Only exclude by default if not explicitly included
       ],
-      solanaRpcUrl: config.solanaRpcUrl || config.rcps?.[ChainIdEnum.SOLANA] || undefined,
+      solanaRpcUrl: config.solanaRpcUrl || config.rpcs?.[ChainIdEnum.SOLANA] || undefined,
+      rpcs: {
+        ...config.rpcs,
+        [ChainIdEnum.SOLANA]: config.solanaRpcUrl || config.rpcs?.[ChainIdEnum.SOLANA] || '',
+        [ChainIdEnum.SUI]: config.suiRpcUrl || config.rpcs?.[ChainIdEnum.SUI] || '',
+      },
     };
 
     this.initializeProtocols();
@@ -314,10 +319,10 @@ export class GeniusIntents {
     const compatibleProtocols = this.getCompatibleProtocols(params);
 
     if (this.config.simulateQuotes || this.config.checkApprovals) {
-      if (!this.config.rcps?.[params.networkIn]) {
+      if (!this.config.rpcs?.[params.networkIn]) {
         throw sdkError(
           SdkErrorEnum.MISSING_RPC_URL,
-          'rcps are required for quote simulation and approval checks',
+          'rpcs are required for quote simulation and approval checks',
         );
       }
     }
@@ -554,7 +559,7 @@ export class GeniusIntents {
       value: '0',
     };
 
-    const rpcUrl = this.config.rcps?.[result.networkIn];
+    const rpcUrl = this.config.rpcs?.[result.networkIn];
     if (!rpcUrl) {
       return {
         txnData,
@@ -669,7 +674,7 @@ export class GeniusIntents {
       return this.config.customEvmSimulation(network, from, tokenIn, evmExecutionPayload);
     }
 
-    const rpcUrl = this.config.rcps?.[network];
+    const rpcUrl = this.config.rpcs?.[network];
     if (!rpcUrl) {
       return {
         simulationSuccess: false,
@@ -745,7 +750,7 @@ export class GeniusIntents {
       return this.config.customSvmSimulation(svmExecutionPayload);
     }
 
-    const rpcUrl = this.config.rcps?.[ChainIdEnum.SOLANA];
+    const rpcUrl = this.config.rpcs?.[ChainIdEnum.SOLANA];
     if (!rpcUrl) {
       return {
         simulationSuccess: false,

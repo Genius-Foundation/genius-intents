@@ -371,10 +371,10 @@ describe('GeniusIntents', () => {
   });
 
   describe('Quote Simulation', () => {
-    test('should require rcps when simulateQuotes is enabled', async () => {
+    test('should require rpcs when simulateQuotes is enabled', async () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
-        // No rcps provided
+        // No rpcs provided
       };
 
       geniusIntents = new GeniusIntents(config);
@@ -382,7 +382,7 @@ describe('GeniusIntents', () => {
       const params = createQuoteParams();
 
       await expect(geniusIntents.fetchQuote(params)).rejects.toThrow(
-        'rcps are required for quote simulation and approval checks'
+        'rpcs are required for quote simulation and approval checks'
       );
     });
 
@@ -417,7 +417,7 @@ describe('GeniusIntents', () => {
     test('should handle approval checking configuration', () => {
       const config: GeniusIntentsConfig = {
         checkApprovals: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -430,7 +430,7 @@ describe('GeniusIntents', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
         checkApprovals: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -447,7 +447,7 @@ describe('GeniusIntents', () => {
         simulateQuotes: true,
         customEvmSimulation,
         customSvmSimulation,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
           [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
         },

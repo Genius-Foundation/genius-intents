@@ -54,10 +54,10 @@ describe('Quote Simulation Basic Tests', () => {
   });
 
   describe('Configuration Validation', () => {
-    test('should require rcps when simulateQuotes is enabled', async () => {
+    test('should require rpcs when simulateQuotes is enabled', async () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
-        // No rcps provided
+        // No rpcs provided
       };
 
       geniusIntents = new GeniusIntents(config);
@@ -74,14 +74,14 @@ describe('Quote Simulation Basic Tests', () => {
       };
 
       await expect(geniusIntents.fetchQuote(params)).rejects.toThrow(
-        'rcps are required for quote simulation and approval checks'
+        'rpcs are required for quote simulation and approval checks'
       );
     });
 
-    test('should require rcps when checkApprovals is enabled', async () => {
+    test('should require rpcs when checkApprovals is enabled', async () => {
       const config: GeniusIntentsConfig = {
         checkApprovals: true,
-        // No rcps provided
+        // No rpcs provided
       };
 
       geniusIntents = new GeniusIntents(config);
@@ -98,15 +98,15 @@ describe('Quote Simulation Basic Tests', () => {
       };
 
       await expect(geniusIntents.fetchQuote(params)).rejects.toThrow(
-        'rcps are required for quote simulation and approval checks'
+        'rpcs are required for quote simulation and approval checks'
       );
     });
 
-    test('should accept valid configuration with rcps', () => {
+    test('should accept valid configuration with rpcs', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
         checkApprovals: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
           [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
         },
@@ -125,7 +125,7 @@ describe('Quote Simulation Basic Tests', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
         customEvmSimulation,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -140,7 +140,7 @@ describe('Quote Simulation Basic Tests', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
         customSvmSimulation,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
         },
         jitoRpc: 'https://jito-api.mainnet.jito.network',
@@ -158,7 +158,7 @@ describe('Quote Simulation Basic Tests', () => {
         simulateQuotes: true,
         customEvmSimulation,
         customSvmSimulation,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
           [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
         },
@@ -236,7 +236,7 @@ describe('Quote Simulation Basic Tests', () => {
       const config: GeniusIntentsConfig = {
         method: 'race',
         simulateQuotes: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -249,7 +249,7 @@ describe('Quote Simulation Basic Tests', () => {
       const config: GeniusIntentsConfig = {
         method: 'best',
         simulateQuotes: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -263,7 +263,7 @@ describe('Quote Simulation Basic Tests', () => {
         method: 'best',
         simulateQuotes: true,
         checkApprovals: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
       };
@@ -277,7 +277,7 @@ describe('Quote Simulation Basic Tests', () => {
     test('should work with EVM protocols', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
         },
         includeProtocols: [ProtocolEnum.ODOS],
@@ -290,7 +290,7 @@ describe('Quote Simulation Basic Tests', () => {
     test('should work with Solana protocols', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
         },
         jitoRpc: 'https://jito-api.mainnet.jito.network',
@@ -304,7 +304,7 @@ describe('Quote Simulation Basic Tests', () => {
     test('should work with cross-chain protocols', () => {
       const config: GeniusIntentsConfig = {
         simulateQuotes: true,
-        rcps: {
+        rpcs: {
           [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
           [ChainIdEnum.POLYGON]: 'https://polygon-rpc.com',
         },

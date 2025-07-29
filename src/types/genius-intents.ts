@@ -34,7 +34,7 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     /**
      * RCPs to use for the protocols & approval checks
      */
-    rcps?: { [network: number]: string };
+    rpcs?: { [network: number]: string };
 
     /**
      * Jito RPC to use for solana quote simulation
