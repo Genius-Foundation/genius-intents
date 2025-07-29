@@ -369,4 +369,93 @@ describe('GeniusIntents', () => {
       expect(instance).toBeDefined();
     });
   });
+
+  describe('Quote Simulation', () => {
+    test('should require rpcs when simulateQuotes is enabled', async () => {
+      const config: GeniusIntentsConfig = {
+        simulateQuotes: true,
+        // No rpcs provided
+      };
+
+      geniusIntents = new GeniusIntents(config);
+
+      const params = createQuoteParams();
+
+      await expect(geniusIntents.fetchQuote(params)).rejects.toThrow(
+        'rpcs are required for quote simulation and approval checks'
+      );
+    });
+
+    test('should check simulation status correctly', () => {
+      const config: GeniusIntentsConfig = {
+        simulateQuotes: true,
+      };
+
+      geniusIntents = new GeniusIntents(config);
+
+      // Test response without simulation status
+      const responseWithoutSimulation = {
+        amountOut: '1800000000',
+      };
+      expect((geniusIntents as any).isQuoteSimulationStatusOk(responseWithoutSimulation)).toBe(true);
+
+      // Test response with successful simulation
+      const responseWithSuccess = {
+        amountOut: '1800000000',
+        simulationSuccess: true,
+      };
+      expect((geniusIntents as any).isQuoteSimulationStatusOk(responseWithSuccess)).toBe(true);
+
+      // Test response with failed simulation
+      const responseWithFailure = {
+        amountOut: '1800000000',
+        simulationSuccess: false,
+      };
+      expect((geniusIntents as any).isQuoteSimulationStatusOk(responseWithFailure)).toBe(false);
+    });
+
+    test('should handle approval checking configuration', () => {
+      const config: GeniusIntentsConfig = {
+        checkApprovals: true,
+        rpcs: {
+          [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
+        },
+      };
+
+      geniusIntents = new GeniusIntents(config);
+      expect(geniusIntents).toBeDefined();
+    });
+
+    test('should handle enhanced simulation with approval logic', () => {
+      const config: GeniusIntentsConfig = {
+        simulateQuotes: true,
+        checkApprovals: true,
+        rpcs: {
+          [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
+        },
+      };
+
+      geniusIntents = new GeniusIntents(config);
+      expect(geniusIntents).toBeDefined();
+    });
+
+    test('should support custom simulation functions', () => {
+      const customEvmSimulation = jest.fn() as any;
+      const customSvmSimulation = jest.fn() as any;
+
+      const config: GeniusIntentsConfig = {
+        simulateQuotes: true,
+        customEvmSimulation,
+        customSvmSimulation,
+        rpcs: {
+          [ChainIdEnum.ETHEREUM]: 'https://eth-mainnet.alchemyapi.io/v2/test',
+          [ChainIdEnum.SOLANA]: 'https://api.mainnet-beta.solana.com',
+        },
+        jitoRpc: 'https://jito-api.mainnet.jito.network',
+      };
+
+      geniusIntents = new GeniusIntents(config);
+      expect(geniusIntents).toBeDefined();
+    });
+  });
 });

@@ -21,6 +21,7 @@ export type QuoteResponse = {
   amountIn: string;
   amountOut: string;
   estimatedGas?: string;
+  simulationSuccess?: boolean;
   slippage: number;
   priceImpact?: number;
   from: string;
