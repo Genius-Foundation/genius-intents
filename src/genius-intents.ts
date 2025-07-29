@@ -413,6 +413,12 @@ export class GeniusIntents {
 
       const response = await Promise.race([protocol.fetchQuote(params), timeoutPromise]);
 
+      if (this.config.simulateQuotes) {
+        const simulationResult = await this.simulateQuote(response);
+        response.simulationSuccess = simulationResult.simulationSuccess;
+        response.estimatedGas = simulationResult.gasEstimate;
+      }
+
       return {
         protocol: protocol.protocol,
         response,
@@ -457,7 +463,8 @@ export class GeniusIntents {
             !winner &&
             !result.error &&
             result.response?.amountOut &&
-            BigInt(result.response.amountOut) > BigInt(0)
+            BigInt(result.response.amountOut) > BigInt(0) &&
+            this.isQuoteSimulationStatusOk(result.response)
           ) {
             winner = result;
           }
@@ -493,6 +500,9 @@ export class GeniusIntents {
     return successfulResults.reduce((best, current) => {
       const bestAmount = BigInt(best.response!.amountOut);
       const currentAmount = BigInt(current.response!.amountOut);
+      if (!this.isQuoteSimulationStatusOk(current.response!)) {
+        return best;
+      }
       return currentAmount > bestAmount ? current : best;
     }).response;
   }
@@ -553,43 +563,73 @@ export class GeniusIntents {
     };
   }
 
-  protected async simulateQuote(result: IntentQuoteResult): Promise<boolean> {
-    if (!result.response) {
-      return false;
+  protected async simulateQuote(result: QuoteResponse): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+    gasEstimate?: string;
+  }> {
+    if (!result) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Quote response is undefined'),
+      };
     }
 
-    if (result.response.evmExecutionPayload) {
-      return this.simulateQuoteEvm(
-        result.response.networkIn,
-        result.response.from,
-        result.response.evmExecutionPayload,
+    try {
+      if (result.evmExecutionPayload) {
+        return await this.simulateQuoteEvm(
+          result.networkIn,
+          result.from,
+          result.evmExecutionPayload,
+        );
+      }
+
+      if (result.svmExecutionPayload) {
+        return await this.simulateQuoteSvm(result.svmExecutionPayload);
+      }
+    } catch (error) {
+      logger.error(
+        'Quote simulation failed',
+        error instanceof Error ? error : new Error('Unknown error'),
       );
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Quote simulation failed'),
+      };
     }
 
-    if (result.response.svmExecutionPayload) {
-      return this.simulateQuoteSvm(result.response.svmExecutionPayload);
-    }
-
-    return false;
+    return {
+      simulationSuccess: false,
+      simulationError: new Error('No execution payload found'),
+    };
   }
 
   protected async simulateQuoteEvm(
     network: ChainIdEnum,
     from: string,
     evmExecutionPayload: EvmQuoteExecutionPayload,
-  ): Promise<boolean> {
+  ): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+    gasEstimate?: string;
+  }> {
     if (this.config.customEvmSimulation) {
       return this.config.customEvmSimulation(network, from, evmExecutionPayload);
     }
 
+    let gasEstimate: bigint | undefined;
+
     const rpcUrl = this.config.rcps?.[network];
     if (!rpcUrl) {
-      return false;
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No RPC URL found'),
+      };
     }
 
     try {
       const provider = new JsonRpcProvider(rpcUrl);
-      await provider.estimateGas({
+      gasEstimate = await provider.estimateGas({
         to: evmExecutionPayload.transactionData.to,
         data: evmExecutionPayload.transactionData.data,
         value: evmExecutionPayload.transactionData.value,
@@ -600,25 +640,41 @@ export class GeniusIntents {
         'Error estimating gas for evm quote simulation',
         error instanceof Error ? error : new Error('Unknown error'),
       );
-      return false;
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('EVM quote simulation failed'),
+      };
     }
 
-    return true;
+    return {
+      simulationSuccess: true,
+      gasEstimate: gasEstimate ? gasEstimate.toString() : undefined,
+    };
   }
 
-  protected async simulateQuoteSvm(
-    svmExecutionPayload: SvmQuoteExecutionPayload,
-  ): Promise<boolean> {
+  protected async simulateQuoteSvm(svmExecutionPayload: SvmQuoteExecutionPayload): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+  }> {
     if (this.config.customSvmSimulation) {
       return this.config.customSvmSimulation(svmExecutionPayload);
     }
 
     const rpcUrl = this.config.rcps?.[ChainIdEnum.SOLANA];
     if (!rpcUrl) {
-      return false;
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No RPC URL found'),
+      };
     }
 
-    if (!this.config.jitoRpc) return true;
+    if (!this.config.jitoRpc) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No Jito RPC URL found'),
+      };
+    }
+
     // Simulate using Jito
     const simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
 
@@ -627,10 +683,15 @@ export class GeniusIntents {
         'Solana quote simulation failed',
         simulationResult.error ? new Error(simulationResult.error) : undefined,
       );
-      return false;
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Solana quote simulation failed'),
+      };
     }
 
-    return true;
+    return {
+      simulationSuccess: true,
+    };
   }
   /**
    * Get list of initialized protocols
@@ -657,5 +718,10 @@ export class GeniusIntents {
       this.protocols.clear();
       this.initializeProtocols();
     }
+  }
+
+  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse): boolean {
+    // If undefined or missing, it means the simulation was not necessary for this protocol
+    return !('simulationSuccess' in result) || result.simulationSuccess !== false;
   }
 }

@@ -67,12 +67,19 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
       network: number,
       from: string,
       evmExecutionPayload: EvmQuoteExecutionPayload,
-    ) => Promise<boolean>;
+    ) => Promise<{
+      simulationSuccess?: boolean;
+      simulationError?: Error;
+      gasEstimate?: string;
+    }>;
 
     /**
      * Custom simulation function to use for svm quote simulation
      */
-    customSvmSimulation?: (svmExecutionPayload: SvmQuoteExecutionPayload) => Promise<boolean>;
+    customSvmSimulation?: (svmExecutionPayload: SvmQuoteExecutionPayload) => Promise<{
+      simulationSuccess?: boolean;
+      simulationError?: Error;
+    }>;
 
     /**
      * Specific protocols to include (if not specified, all compatible protocols will be used)
