@@ -2,7 +2,7 @@ import { Connection, VersionedTransaction } from '@solana/web3.js';
 import axios from 'axios';
 import bs58 from 'bs58';
 
-interface ITXSimulationResults {
+export interface ITXSimulationResults {
   jitoSimulations?: unknown;
   simsPassed: boolean;
   status: 'success' | 'error';

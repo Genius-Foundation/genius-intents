@@ -44,7 +44,9 @@ import {
   SvmQuoteExecutionPayload,
 } from './types/quote-execution-payload';
 import { JsonRpcProvider, ethers } from 'ethers';
-import simulateJito from './utils/jito';
+import simulateJito, { ITXSimulationResults } from './utils/jito';
+import { Connection, SimulateTransactionConfig, VersionedTransaction } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 let logger: ILogger;
 
@@ -749,7 +751,6 @@ export class GeniusIntents {
     if (this.config.customSvmSimulation) {
       return this.config.customSvmSimulation(svmExecutionPayload);
     }
-
     const rpcUrl = this.config.rpcs?.[ChainIdEnum.SOLANA];
     if (!rpcUrl) {
       return {
@@ -757,16 +758,37 @@ export class GeniusIntents {
         simulationError: new Error('No RPC URL found'),
       };
     }
-
-    if (!this.config.jitoRpc) {
-      return {
-        simulationSuccess: false,
-        simulationError: new Error('No Jito RPC URL found'),
+    let simulationResult: ITXSimulationResults;
+    if (svmExecutionPayload?.length > 1) {
+      if (!this.config.jitoRpc) {
+        return {
+          simulationSuccess: false,
+          simulationError: new Error('No Jito RPC URL found'),
+        };
+      }
+      simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
+    } else {
+      const connection = new Connection(rpcUrl);
+      const simulateConfig: SimulateTransactionConfig = {
+        sigVerify: false,
       };
+      const { blockhash } = await connection.getLatestBlockhash('finalized');
+      const vTxn = VersionedTransaction.deserialize(bs58.decode(svmExecutionPayload[0] as string));
+      vTxn.message.recentBlockhash = blockhash;
+      const singleSimResponse = await connection.simulateTransaction(vTxn, simulateConfig);
+      if (!singleSimResponse || !singleSimResponse?.value || singleSimResponse?.value?.err) {
+        simulationResult = {
+          simsPassed: false,
+          status: 'error',
+          error: JSON.stringify(singleSimResponse),
+        };
+      } else {
+        simulationResult = {
+          simsPassed: true,
+          status: 'success',
+        };
+      }
     }
-
-    // Simulate using Jito
-    const simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
 
     if (!simulationResult.simsPassed) {
       logger.error(
