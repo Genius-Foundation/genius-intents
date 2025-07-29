@@ -44,6 +44,7 @@ import {
   SvmQuoteExecutionPayload,
 } from './types/quote-execution-payload';
 import { JsonRpcProvider } from 'ethers';
+import simulateJito from './utils/jito';
 
 let logger: ILogger;
 
@@ -616,7 +617,19 @@ export class GeniusIntents {
     if (!rpcUrl) {
       return false;
     }
-    // TODO: Estimate gas for the solana execution payload
+
+    if (!this.config.jitoRpc) return true;
+    // Simulate using Jito
+    const simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
+
+    if (!simulationResult.simsPassed) {
+      logger.error(
+        'Solana quote simulation failed',
+        simulationResult.error ? new Error(simulationResult.error) : undefined,
+      );
+      return false;
+    }
+
     return true;
   }
   /**

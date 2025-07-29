@@ -37,6 +37,11 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     rcps?: { [network: number]: string };
 
     /**
+     * Jito RPC to use for solana quote simulation
+     */
+    jitoRpc?: string;
+
+    /**
      * Maximum number of concurrent protocol requests
      */
     maxConcurrency?: number;
@@ -51,6 +56,7 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     /**
      * When fetching a quote, it will be simulated to check if the quote is valid
      * @requires rpcs to be provided in the config
+     * @requires jitoRpc for solana quote simulation
      */
     simulateQuotes?: boolean;
 
