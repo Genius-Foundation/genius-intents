@@ -500,10 +500,12 @@ export class GeniusIntents {
     return successfulResults.reduce((best, current) => {
       const bestAmount = BigInt(best.response!.amountOut);
       const currentAmount = BigInt(current.response!.amountOut);
-      if (!this.isQuoteSimulationStatusOk(current.response!)) {
-        return best;
-      }
-      return currentAmount > bestAmount ? current : best;
+      const betterAmountOut = currentAmount > bestAmount;
+      const currentSimulationOk = this.isQuoteSimulationStatusOk(current.response);
+      const bestSimulationOk = this.isQuoteSimulationStatusOk(best.response);
+      const betterSimulationOk = currentSimulationOk && !bestSimulationOk;
+      const bothSimulationSame = currentSimulationOk === bestSimulationOk;
+      return (betterAmountOut && bothSimulationSame) || betterSimulationOk ? current : best;
     }).response;
   }
 
@@ -809,8 +811,9 @@ export class GeniusIntents {
     }
   }
 
-  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse): boolean {
+  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse | undefined): boolean {
     // If undefined or missing, it means the simulation was not necessary for this protocol
+    if (!result) return true;
     return !('simulationSuccess' in result) || result.simulationSuccess !== false;
   }
 }
