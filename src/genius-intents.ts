@@ -572,8 +572,13 @@ export class GeniusIntents {
    * allowance[owner][spender] = keccak256(spender . keccak256(owner . slot))
    */
   protected calculateAllowanceSlot(owner: string, spender: string): string {
-    const outerSlot = ethers.solidityPackedKeccak256(['address', 'uint256'], [owner, 1]);
-    return ethers.solidityPackedKeccak256(['address', 'bytes32'], [spender, outerSlot]);
+    const abiCoder = new ethers.AbiCoder();
+
+    const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, 1]));
+
+    const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
+
+    return outer;
   }
 
   /**
@@ -608,7 +613,9 @@ export class GeniusIntents {
         {
           to: evmExecutionPayload.transactionData.to,
           data: evmExecutionPayload.transactionData.data,
-          value: evmExecutionPayload.transactionData.value,
+          value: evmExecutionPayload.transactionData.value.startsWith('0x')
+            ? evmExecutionPayload.transactionData.value
+            : `0x${evmExecutionPayload.transactionData.value}`,
           from,
         },
         'latest',
