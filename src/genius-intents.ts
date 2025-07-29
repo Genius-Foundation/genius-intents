@@ -45,8 +45,7 @@ import {
 } from './types/quote-execution-payload';
 import { JsonRpcProvider, ethers } from 'ethers';
 import simulateJito, { ITXSimulationResults } from './utils/jito';
-import { Connection, SimulateTransactionConfig, VersionedTransaction } from '@solana/web3.js';
-import bs58 from 'bs58';
+import simulateSolana from './utils/simulate-solana';
 
 let logger: ILogger;
 
@@ -768,28 +767,8 @@ export class GeniusIntents {
       }
       simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
     } else {
-      const connection = new Connection(rpcUrl);
-      const simulateConfig: SimulateTransactionConfig = {
-        sigVerify: false,
-      };
-      const { blockhash } = await connection.getLatestBlockhash('finalized');
-      const vTxn = VersionedTransaction.deserialize(bs58.decode(svmExecutionPayload[0] as string));
-      vTxn.message.recentBlockhash = blockhash;
-      const singleSimResponse = await connection.simulateTransaction(vTxn, simulateConfig);
-      if (!singleSimResponse || !singleSimResponse?.value || singleSimResponse?.value?.err) {
-        simulationResult = {
-          simsPassed: false,
-          status: 'error',
-          error: JSON.stringify(singleSimResponse),
-        };
-      } else {
-        simulationResult = {
-          simsPassed: true,
-          status: 'success',
-        };
-      }
+      simulationResult = await simulateSolana(rpcUrl, svmExecutionPayload[0] as string);
     }
-
     if (!simulationResult.simsPassed) {
       logger.error(
         'Solana quote simulation failed',
