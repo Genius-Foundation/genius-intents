@@ -66,6 +66,7 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     customEvmSimulation?: (
       network: number,
       from: string,
+      tokenIn: string,
       evmExecutionPayload: EvmQuoteExecutionPayload,
     ) => Promise<{
       simulationSuccess?: boolean;

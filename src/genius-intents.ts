@@ -416,7 +416,14 @@ export class GeniusIntents {
       if (this.config.simulateQuotes) {
         const simulationResult = await this.simulateQuote(response);
         response.simulationSuccess = simulationResult.simulationSuccess;
-        response.estimatedGas = simulationResult.gasEstimate;
+        if (response.evmExecutionPayload && simulationResult.quoteGasEstimate) {
+          response.evmExecutionPayload.transactionData.gasEstimate =
+            simulationResult.quoteGasEstimate;
+        }
+        if (response.evmExecutionPayload && simulationResult.approvalGasEstimate) {
+          response.evmExecutionPayload.approval.txnData!.gasEstimate =
+            simulationResult.approvalGasEstimate;
+        }
       }
 
       return {
@@ -571,85 +578,41 @@ export class GeniusIntents {
    * Standard ERC20 allowance mapping is at slot 1
    * allowance[owner][spender] = keccak256(spender . keccak256(owner . slot))
    */
-  protected calculateAllowanceSlot(owner: string, spender: string): string {
+  protected generateAllowanceOverrides(
+    owner: string,
+    spender: string,
+    maxSlots = 10,
+  ): Record<string, string> {
     const abiCoder = new ethers.AbiCoder();
 
-    const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, 1]));
+    const storage: Record<string, string> = {};
 
-    const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
+    for (let i = 0; i < maxSlots; i++) {
+      const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, i]));
+      const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
+      storage[outer] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+    }
 
-    return outer;
+    return storage;
   }
 
-  /**
-   * Simulate quote with approval using state overrides
-   */
-  protected async simulateQuoteWithApproval(
-    network: ChainIdEnum,
-    from: string,
-    tokenIn: string,
-    evmExecutionPayload: EvmQuoteExecutionPayload,
-  ): Promise<{
-    simulationSuccess?: boolean;
-    simulationError?: Error;
-    gasEstimate?: string;
-  }> {
-    const rpcUrl = this.config.rcps?.[network];
-    if (!rpcUrl) {
-      return {
-        simulationSuccess: false,
-        simulationError: new Error('No RPC URL found'),
-      };
+  protected generateBalanceOverrides(owner: string, maxSlots = 10): Record<string, string> {
+    const abi = new ethers.AbiCoder();
+    const storage: Record<string, string> = {};
+
+    for (let i = 0; i < maxSlots; i++) {
+      const slotHash = ethers.keccak256(abi.encode(['address', 'uint256'], [owner, i]));
+      storage[slotHash] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
     }
 
-    const provider = new JsonRpcProvider(rpcUrl);
-
-    try {
-      // Calculate the allowance storage slot
-      const slot = this.calculateAllowanceSlot(from, evmExecutionPayload.approval.spender);
-
-      // Use eth_estimateGas with state overrides to simulate the swap with approval already set
-      const swapGasHex = await provider.send('eth_estimateGas', [
-        {
-          to: evmExecutionPayload.transactionData.to,
-          data: evmExecutionPayload.transactionData.data,
-          value: evmExecutionPayload.transactionData.value.startsWith('0x')
-            ? evmExecutionPayload.transactionData.value
-            : `0x${evmExecutionPayload.transactionData.value}`,
-          from,
-        },
-        'latest',
-        {
-          [tokenIn]: {
-            stateDiff: {
-              [slot]: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
-            },
-          },
-        },
-      ]);
-
-      const swapGas = BigInt(swapGasHex);
-
-      return {
-        simulationSuccess: true,
-        gasEstimate: swapGas.toString(),
-      };
-    } catch (error) {
-      logger.error(
-        'Error estimating gas with state override for evm quote simulation',
-        error instanceof Error ? error : new Error('Unknown error'),
-      );
-      return {
-        simulationSuccess: false,
-        simulationError: new Error('EVM quote simulation with state override failed'),
-      };
-    }
+    return storage;
   }
 
   protected async simulateQuote(result: QuoteResponse): Promise<{
     simulationSuccess?: boolean;
     simulationError?: Error;
-    gasEstimate?: string;
+    quoteGasEstimate?: string;
+    approvalGasEstimate?: string;
   }> {
     if (!result) {
       return {
@@ -660,25 +623,12 @@ export class GeniusIntents {
 
     try {
       if (result.evmExecutionPayload) {
-        // Check if approval is needed
-        const approvalCheck = await this.checkApproval(result);
-
-        if (approvalCheck?.approvalRequired) {
-          // Simulate swap with state overrides to account for approval
-          return await this.simulateQuoteWithApproval(
-            result.networkIn,
-            result.from,
-            result.tokenIn,
-            result.evmExecutionPayload,
-          );
-        } else {
-          // Just simulate swap normally
-          return await this.simulateQuoteEvm(
-            result.networkIn,
-            result.from,
-            result.evmExecutionPayload,
-          );
-        }
+        return await this.simulateQuoteEvm(
+          result.networkIn,
+          result.from,
+          result.tokenIn,
+          result.evmExecutionPayload,
+        );
       }
 
       if (result.svmExecutionPayload) {
@@ -701,20 +651,23 @@ export class GeniusIntents {
     };
   }
 
+  /**
+   * Simulate quote with approval using state overrides
+   */
   protected async simulateQuoteEvm(
     network: ChainIdEnum,
     from: string,
+    tokenIn: string,
     evmExecutionPayload: EvmQuoteExecutionPayload,
   ): Promise<{
     simulationSuccess?: boolean;
     simulationError?: Error;
-    gasEstimate?: string;
+    quoteGasEstimate?: string;
+    approvalGasEstimate?: string;
   }> {
     if (this.config.customEvmSimulation) {
-      return this.config.customEvmSimulation(network, from, evmExecutionPayload);
+      return this.config.customEvmSimulation(network, from, tokenIn, evmExecutionPayload);
     }
-
-    let gasEstimate: bigint | undefined;
 
     const rpcUrl = this.config.rcps?.[network];
     if (!rpcUrl) {
@@ -724,29 +677,64 @@ export class GeniusIntents {
       };
     }
 
+    const provider = new JsonRpcProvider(rpcUrl);
+
     try {
-      const provider = new JsonRpcProvider(rpcUrl);
-      gasEstimate = await provider.estimateGas({
-        to: evmExecutionPayload.transactionData.to,
-        data: evmExecutionPayload.transactionData.data,
-        value: evmExecutionPayload.transactionData.value,
+      let approvalGasEstimate: bigint | undefined;
+      if (evmExecutionPayload.approval.txnData) {
+        approvalGasEstimate = await provider.estimateGas({
+          to: evmExecutionPayload.approval.txnData.to,
+          data: evmExecutionPayload.approval.txnData.data,
+          value: evmExecutionPayload.approval.txnData.value,
+          from,
+        });
+      }
+
+      // Calculate the allowance storage slot
+      const approvalSlots = this.generateAllowanceOverrides(
         from,
-      });
+        evmExecutionPayload.approval.spender,
+      );
+      const balanceSlots = this.generateBalanceOverrides(from);
+
+      // Use eth_estimateGas with state overrides to simulate the swap with approval already set
+      const swapGasHex = await provider.send('eth_estimateGas', [
+        {
+          to: evmExecutionPayload.transactionData.to,
+          data: evmExecutionPayload.transactionData.data,
+          value: evmExecutionPayload.transactionData.value.startsWith('0x')
+            ? evmExecutionPayload.transactionData.value
+            : `0x${evmExecutionPayload.transactionData.value}`,
+          from,
+        },
+        'latest',
+        {
+          [tokenIn]: {
+            stateDiff: {
+              ...approvalSlots,
+              ...balanceSlots,
+            },
+          },
+        },
+      ]);
+
+      const swapGas = BigInt(swapGasHex);
+
+      return {
+        simulationSuccess: true,
+        quoteGasEstimate: swapGas.toString(),
+        approvalGasEstimate: approvalGasEstimate?.toString(),
+      };
     } catch (error) {
       logger.error(
-        'Error estimating gas for evm quote simulation',
+        'Error estimating gas with state override for evm quote simulation',
         error instanceof Error ? error : new Error('Unknown error'),
       );
       return {
         simulationSuccess: false,
-        simulationError: new Error('EVM quote simulation failed'),
+        simulationError: new Error('EVM quote simulation with state override failed'),
       };
     }
-
-    return {
-      simulationSuccess: true,
-      gasEstimate: gasEstimate ? gasEstimate.toString() : undefined,
-    };
   }
 
   protected async simulateQuoteSvm(svmExecutionPayload: SvmQuoteExecutionPayload): Promise<{
