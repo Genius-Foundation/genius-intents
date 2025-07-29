@@ -43,7 +43,7 @@ import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
 } from './types/quote-execution-payload';
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, ethers } from 'ethers';
 import simulateJito from './utils/jito';
 
 let logger: ILogger;
@@ -563,10 +563,85 @@ export class GeniusIntents {
     };
   }
 
+  /**
+   * Helper to calculate ERC20 allowance storage slot
+   * Standard ERC20 allowance mapping is at slot 1
+   * allowance[owner][spender] = keccak256(spender . keccak256(owner . slot))
+   */
+  protected calculateAllowanceSlot(owner: string, spender: string): string {
+    const slot = ethers.solidityPackedKeccak256(['address', 'uint256'], [owner, 1]);
+    return ethers.solidityPackedKeccak256(['address', 'bytes32'], [spender, slot]);
+  }
+
+  /**
+   * Simulate quote with approval using state overrides
+   */
+  protected async simulateQuoteWithApproval(
+    network: ChainIdEnum,
+    from: string,
+    tokenIn: string,
+    evmExecutionPayload: EvmQuoteExecutionPayload,
+  ): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+    gasEstimate?: string;
+  }> {
+    const rpcUrl = this.config.rcps?.[network];
+    if (!rpcUrl) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No RPC URL found'),
+      };
+    }
+
+    const provider = new JsonRpcProvider(rpcUrl);
+
+    try {
+      // Calculate the allowance storage slot
+      const slot = this.calculateAllowanceSlot(from, evmExecutionPayload.approval.spender);
+
+      // Use eth_estimateGas with state overrides to simulate the approval effect
+      const swapGasHex = await provider.send('eth_estimateGas', [
+        {
+          to: evmExecutionPayload.transactionData.to,
+          data: evmExecutionPayload.transactionData.data,
+          value: evmExecutionPayload.transactionData.value,
+          from,
+        },
+        'latest',
+        {
+          [tokenIn]: {
+            stateDiff: {
+              [slot]: ethers.toBeHex(evmExecutionPayload.approval.amount, 32),
+            },
+          },
+        },
+      ]);
+
+      const swapGas = BigInt(swapGasHex);
+
+      return {
+        simulationSuccess: true,
+        gasEstimate: swapGas.toString(),
+      };
+    } catch (error) {
+      logger.error(
+        'Error estimating gas with approval for evm quote simulation',
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('EVM quote simulation with approval failed'),
+      };
+    }
+  }
+
   protected async simulateQuote(result: QuoteResponse): Promise<{
     simulationSuccess?: boolean;
     simulationError?: Error;
     gasEstimate?: string;
+    approvalGasEstimate?: string;
+    totalGasEstimate?: string;
   }> {
     if (!result) {
       return {
@@ -577,11 +652,25 @@ export class GeniusIntents {
 
     try {
       if (result.evmExecutionPayload) {
-        return await this.simulateQuoteEvm(
-          result.networkIn,
-          result.from,
-          result.evmExecutionPayload,
-        );
+        // Check if approval is needed
+        const approvalCheck = await this.checkApproval(result);
+
+        if (approvalCheck?.approvalRequired) {
+          // Simulate both approval and swap with state overrides
+          return await this.simulateQuoteWithApproval(
+            result.networkIn,
+            result.from,
+            result.tokenIn,
+            result.evmExecutionPayload,
+          );
+        } else {
+          // Just simulate swap
+          return await this.simulateQuoteEvm(
+            result.networkIn,
+            result.from,
+            result.evmExecutionPayload,
+          );
+        }
       }
 
       if (result.svmExecutionPayload) {
