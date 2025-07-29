@@ -501,8 +501,9 @@ export class GeniusIntents {
       const bestAmount = BigInt(best.response!.amountOut);
       const currentAmount = BigInt(current.response!.amountOut);
       const betterAmountOut = currentAmount > bestAmount;
-      const currentSimulationOk = this.isQuoteSimulationStatusOk(current.response);
-      const bestSimulationOk = this.isQuoteSimulationStatusOk(best.response);
+      const currentSimulationOk =
+        current.response && this.isQuoteSimulationStatusOk(current.response);
+      const bestSimulationOk = best.response && this.isQuoteSimulationStatusOk(best.response);
       const betterSimulationOk = currentSimulationOk && !bestSimulationOk;
       const bothSimulationSame = currentSimulationOk === bestSimulationOk;
       return (betterAmountOut && bothSimulationSame) || betterSimulationOk ? current : best;
@@ -571,8 +572,8 @@ export class GeniusIntents {
    * allowance[owner][spender] = keccak256(spender . keccak256(owner . slot))
    */
   protected calculateAllowanceSlot(owner: string, spender: string): string {
-    const slot = ethers.solidityPackedKeccak256(['address', 'uint256'], [owner, 1]);
-    return ethers.solidityPackedKeccak256(['address', 'bytes32'], [spender, slot]);
+    const outerSlot = ethers.solidityPackedKeccak256(['address', 'uint256'], [owner, 1]);
+    return ethers.solidityPackedKeccak256(['address', 'bytes32'], [spender, outerSlot]);
   }
 
   /**
@@ -602,7 +603,7 @@ export class GeniusIntents {
       // Calculate the allowance storage slot
       const slot = this.calculateAllowanceSlot(from, evmExecutionPayload.approval.spender);
 
-      // Use eth_estimateGas with state overrides to simulate the approval effect
+      // Use eth_estimateGas with state overrides to simulate the swap with approval already set
       const swapGasHex = await provider.send('eth_estimateGas', [
         {
           to: evmExecutionPayload.transactionData.to,
@@ -614,7 +615,7 @@ export class GeniusIntents {
         {
           [tokenIn]: {
             stateDiff: {
-              [slot]: ethers.toBeHex(evmExecutionPayload.approval.amount, 32),
+              [slot]: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             },
           },
         },
@@ -628,12 +629,12 @@ export class GeniusIntents {
       };
     } catch (error) {
       logger.error(
-        'Error estimating gas with approval for evm quote simulation',
+        'Error estimating gas with state override for evm quote simulation',
         error instanceof Error ? error : new Error('Unknown error'),
       );
       return {
         simulationSuccess: false,
-        simulationError: new Error('EVM quote simulation with approval failed'),
+        simulationError: new Error('EVM quote simulation with state override failed'),
       };
     }
   }
@@ -642,8 +643,6 @@ export class GeniusIntents {
     simulationSuccess?: boolean;
     simulationError?: Error;
     gasEstimate?: string;
-    approvalGasEstimate?: string;
-    totalGasEstimate?: string;
   }> {
     if (!result) {
       return {
@@ -658,7 +657,7 @@ export class GeniusIntents {
         const approvalCheck = await this.checkApproval(result);
 
         if (approvalCheck?.approvalRequired) {
-          // Simulate both approval and swap with state overrides
+          // Simulate swap with state overrides to account for approval
           return await this.simulateQuoteWithApproval(
             result.networkIn,
             result.from,
@@ -666,7 +665,7 @@ export class GeniusIntents {
             result.evmExecutionPayload,
           );
         } else {
-          // Just simulate swap
+          // Just simulate swap normally
           return await this.simulateQuoteEvm(
             result.networkIn,
             result.from,
@@ -811,9 +810,8 @@ export class GeniusIntents {
     }
   }
 
-  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse | undefined): boolean {
+  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse): boolean {
     // If undefined or missing, it means the simulation was not necessary for this protocol
-    if (!result) return true;
     return !('simulationSuccess' in result) || result.simulationSuccess !== false;
   }
 }
