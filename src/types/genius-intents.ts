@@ -12,6 +12,7 @@ import { OpenOceanConfig } from '../protocols/openocean/openocean.types';
 import { AftermathConfig } from '../protocols/aftermath/aftermath.types';
 import { ZeroXConfig } from '../protocols/zeroX/zeroX.types';
 import { AcrossConfig } from '../protocols/across';
+import { EvmQuoteExecutionPayload, SvmQuoteExecutionPayload } from './quote-execution-payload';
 
 /**
  * Configuration interface for IntentsProtocols class
@@ -33,7 +34,12 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     /**
      * RCPs to use for the protocols & approval checks
      */
-    rcps?: { [network: number]: string };
+    rpcs?: { [network: number]: string };
+
+    /**
+     * Jito RPC to use for solana quote simulation
+     */
+    jitoRpc?: string;
 
     /**
      * Maximum number of concurrent protocol requests
@@ -46,6 +52,35 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
      * @requires rpcs to be provided in the config
      */
     checkApprovals?: boolean;
+
+    /**
+     * When fetching a quote, it will be simulated to check if the quote is valid
+     * @requires rpcs to be provided in the config
+     * @requires jitoRpc for solana quote simulation
+     */
+    simulateQuotes?: boolean;
+
+    /**
+     * Custom simulation function to use for evm quote simulation
+     */
+    customEvmSimulation?: (
+      network: number,
+      from: string,
+      tokenIn: string,
+      evmExecutionPayload: EvmQuoteExecutionPayload,
+    ) => Promise<{
+      simulationSuccess?: boolean;
+      simulationError?: Error;
+      gasEstimate?: string;
+    }>;
+
+    /**
+     * Custom simulation function to use for svm quote simulation
+     */
+    customSvmSimulation?: (svmExecutionPayload: SvmQuoteExecutionPayload) => Promise<{
+      simulationSuccess?: boolean;
+      simulationError?: Error;
+    }>;
 
     /**
      * Specific protocols to include (if not specified, all compatible protocols will be used)

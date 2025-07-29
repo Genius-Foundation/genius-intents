@@ -39,6 +39,12 @@ import { EvmTransactionData } from './types/evm-transaction-data';
 import { Erc20Service } from './lib/erc20/erc20.service';
 import { AcrossService } from './protocols/across/across.service';
 import { AcrossConfig } from './protocols/across/across.types';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from './types/quote-execution-payload';
+import { JsonRpcProvider, ethers } from 'ethers';
+import simulateJito from './utils/jito';
 
 let logger: ILogger;
 
@@ -66,7 +72,12 @@ export class GeniusIntents {
         ...(config.excludeProtocols || []),
         ...(config.includeProtocols ? [] : [ProtocolEnum.GENIUS_BRIDGE]), // Only exclude by default if not explicitly included
       ],
-      solanaRpcUrl: config.solanaRpcUrl || config.rcps?.[ChainIdEnum.SOLANA] || undefined,
+      solanaRpcUrl: config.solanaRpcUrl || config.rpcs?.[ChainIdEnum.SOLANA] || undefined,
+      rpcs: {
+        ...config.rpcs,
+        [ChainIdEnum.SOLANA]: config.solanaRpcUrl || config.rpcs?.[ChainIdEnum.SOLANA] || '',
+        [ChainIdEnum.SUI]: config.suiRpcUrl || config.rpcs?.[ChainIdEnum.SUI] || '',
+      },
     };
 
     this.initializeProtocols();
@@ -307,6 +318,15 @@ export class GeniusIntents {
     const startTime = Date.now();
     const compatibleProtocols = this.getCompatibleProtocols(params);
 
+    if (this.config.simulateQuotes || this.config.checkApprovals) {
+      if (!this.config.rpcs?.[params.networkIn]) {
+        throw sdkError(
+          SdkErrorEnum.MISSING_RPC_URL,
+          'rpcs are required for quote simulation and approval checks',
+        );
+      }
+    }
+
     if (compatibleProtocols.length === 0) {
       throw sdkError(
         SdkErrorEnum.INVALID_PARAMS,
@@ -398,6 +418,19 @@ export class GeniusIntents {
 
       const response = await Promise.race([protocol.fetchQuote(params), timeoutPromise]);
 
+      if (this.config.simulateQuotes) {
+        const simulationResult = await this.simulateQuote(response);
+        response.simulationSuccess = simulationResult.simulationSuccess;
+        if (response.evmExecutionPayload && simulationResult.quoteGasEstimate) {
+          response.evmExecutionPayload.transactionData.gasEstimate =
+            simulationResult.quoteGasEstimate;
+        }
+        if (response.evmExecutionPayload && simulationResult.approvalGasEstimate) {
+          response.evmExecutionPayload.approval.txnData!.gasEstimate =
+            simulationResult.approvalGasEstimate;
+        }
+      }
+
       return {
         protocol: protocol.protocol,
         response,
@@ -438,7 +471,13 @@ export class GeniusIntents {
           results.push(result);
 
           // If this is the first successful result and we don't have a winner yet
-          if (!winner && !result.error) {
+          if (
+            !winner &&
+            !result.error &&
+            result.response?.amountOut &&
+            BigInt(result.response.amountOut) > BigInt(0) &&
+            this.isQuoteSimulationStatusOk(result.response)
+          ) {
             winner = result;
           }
         } catch (error) {
@@ -473,7 +512,13 @@ export class GeniusIntents {
     return successfulResults.reduce((best, current) => {
       const bestAmount = BigInt(best.response!.amountOut);
       const currentAmount = BigInt(current.response!.amountOut);
-      return currentAmount > bestAmount ? current : best;
+      const betterAmountOut = currentAmount > bestAmount;
+      const currentSimulationOk =
+        current.response && this.isQuoteSimulationStatusOk(current.response);
+      const bestSimulationOk = best.response && this.isQuoteSimulationStatusOk(best.response);
+      const betterSimulationOk = currentSimulationOk && !bestSimulationOk;
+      const bothSimulationSame = currentSimulationOk === bestSimulationOk;
+      return (betterAmountOut && bothSimulationSame) || betterSimulationOk ? current : best;
     }).response;
   }
 
@@ -514,7 +559,7 @@ export class GeniusIntents {
       value: '0',
     };
 
-    const rpcUrl = this.config.rcps?.[result.networkIn];
+    const rpcUrl = this.config.rpcs?.[result.networkIn];
     if (!rpcUrl) {
       return {
         txnData,
@@ -533,6 +578,211 @@ export class GeniusIntents {
     };
   }
 
+  /**
+   * Helper to calculate ERC20 allowance storage slot
+   * Standard ERC20 allowance mapping is at slot 1
+   * allowance[owner][spender] = keccak256(spender . keccak256(owner . slot))
+   */
+  protected generateAllowanceOverrides(
+    owner: string,
+    spender: string,
+    maxSlots = 10,
+  ): Record<string, string> {
+    const abiCoder = new ethers.AbiCoder();
+
+    const storage: Record<string, string> = {};
+
+    for (let i = 0; i < maxSlots; i++) {
+      const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, i]));
+      const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
+      storage[outer] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+    }
+
+    return storage;
+  }
+
+  protected generateBalanceOverrides(owner: string, maxSlots = 10): Record<string, string> {
+    const abi = new ethers.AbiCoder();
+    const storage: Record<string, string> = {};
+
+    for (let i = 0; i < maxSlots; i++) {
+      const slotHash = ethers.keccak256(abi.encode(['address', 'uint256'], [owner, i]));
+      storage[slotHash] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+    }
+
+    return storage;
+  }
+
+  protected async simulateQuote(result: QuoteResponse): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+    quoteGasEstimate?: string;
+    approvalGasEstimate?: string;
+  }> {
+    if (!result) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Quote response is undefined'),
+      };
+    }
+
+    try {
+      if (result.evmExecutionPayload) {
+        return await this.simulateQuoteEvm(
+          result.networkIn,
+          result.from,
+          result.tokenIn,
+          result.evmExecutionPayload,
+        );
+      }
+
+      if (result.svmExecutionPayload) {
+        return await this.simulateQuoteSvm(result.svmExecutionPayload);
+      }
+    } catch (error) {
+      logger.error(
+        'Quote simulation failed',
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Quote simulation failed'),
+      };
+    }
+
+    return {
+      simulationSuccess: false,
+      simulationError: new Error('No execution payload found'),
+    };
+  }
+
+  /**
+   * Simulate quote with approval using state overrides
+   */
+  protected async simulateQuoteEvm(
+    network: ChainIdEnum,
+    from: string,
+    tokenIn: string,
+    evmExecutionPayload: EvmQuoteExecutionPayload,
+  ): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+    quoteGasEstimate?: string;
+    approvalGasEstimate?: string;
+  }> {
+    if (this.config.customEvmSimulation) {
+      return this.config.customEvmSimulation(network, from, tokenIn, evmExecutionPayload);
+    }
+
+    const rpcUrl = this.config.rpcs?.[network];
+    if (!rpcUrl) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No RPC URL found'),
+      };
+    }
+
+    const provider = new JsonRpcProvider(rpcUrl);
+
+    try {
+      let approvalGasEstimate: bigint | undefined;
+      if (evmExecutionPayload.approval.txnData) {
+        approvalGasEstimate = await provider.estimateGas({
+          to: evmExecutionPayload.approval.txnData.to,
+          data: evmExecutionPayload.approval.txnData.data,
+          value: evmExecutionPayload.approval.txnData.value,
+          from,
+        });
+      }
+
+      // Calculate the allowance storage slot
+      const approvalSlots = this.generateAllowanceOverrides(
+        from,
+        evmExecutionPayload.approval.spender,
+      );
+      const balanceSlots = this.generateBalanceOverrides(from);
+
+      // Use eth_estimateGas with state overrides to simulate the swap with approval already set
+      const swapGasHex = await provider.send('eth_estimateGas', [
+        {
+          to: evmExecutionPayload.transactionData.to,
+          data: evmExecutionPayload.transactionData.data,
+          value: evmExecutionPayload.transactionData.value.startsWith('0x')
+            ? evmExecutionPayload.transactionData.value
+            : `0x${evmExecutionPayload.transactionData.value}`,
+          from,
+        },
+        'latest',
+        {
+          [tokenIn]: {
+            stateDiff: {
+              ...approvalSlots,
+              ...balanceSlots,
+            },
+          },
+        },
+      ]);
+
+      const swapGas = BigInt(swapGasHex);
+
+      return {
+        simulationSuccess: true,
+        quoteGasEstimate: swapGas.toString(),
+        approvalGasEstimate: approvalGasEstimate?.toString(),
+      };
+    } catch (error) {
+      logger.error(
+        'Error estimating gas with state override for evm quote simulation',
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('EVM quote simulation with state override failed'),
+      };
+    }
+  }
+
+  protected async simulateQuoteSvm(svmExecutionPayload: SvmQuoteExecutionPayload): Promise<{
+    simulationSuccess?: boolean;
+    simulationError?: Error;
+  }> {
+    if (this.config.customSvmSimulation) {
+      return this.config.customSvmSimulation(svmExecutionPayload);
+    }
+
+    const rpcUrl = this.config.rpcs?.[ChainIdEnum.SOLANA];
+    if (!rpcUrl) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No RPC URL found'),
+      };
+    }
+
+    if (!this.config.jitoRpc) {
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('No Jito RPC URL found'),
+      };
+    }
+
+    // Simulate using Jito
+    const simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
+
+    if (!simulationResult.simsPassed) {
+      logger.error(
+        'Solana quote simulation failed',
+        simulationResult.error ? new Error(simulationResult.error) : undefined,
+      );
+      return {
+        simulationSuccess: false,
+        simulationError: new Error('Solana quote simulation failed'),
+      };
+    }
+
+    return {
+      simulationSuccess: true,
+    };
+  }
   /**
    * Get list of initialized protocols
    */
@@ -558,5 +808,10 @@ export class GeniusIntents {
       this.protocols.clear();
       this.initializeProtocols();
     }
+  }
+
+  protected isQuoteSimulationStatusOk(result: QuoteResponse | PriceResponse): boolean {
+    // If undefined or missing, it means the simulation was not necessary for this protocol
+    return !('simulationSuccess' in result) || result.simulationSuccess !== false;
   }
 }
