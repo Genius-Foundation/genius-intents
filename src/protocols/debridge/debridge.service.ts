@@ -42,7 +42,7 @@ export class DeBridgeService implements IIntentProtocol {
   /**
    * RPC URLs for each supported blockchain network.
    */
-  protected readonly rpcUrls: Record<number, string | string[]> = {};
+  protected readonly solanaRpcUrl: string | undefined = undefined;
 
   /**
    * The protocol identifier for DeBridge.
@@ -116,6 +116,7 @@ export class DeBridgeService implements IIntentProtocol {
     this.baseUrl =
       config?.deBridgePrivateUrl || 'https://dln.debridge.finance/v1.0/dln/order/create-tx';
     this.debridgeAccessToken = config?.debridgeAccessToken || null;
+    this.solanaRpcUrl = config?.solanaRpcUrl || undefined;
   }
 
   isCorrectConfig<T extends { [key: string]: string }>(config: {
@@ -207,21 +208,13 @@ export class DeBridgeService implements IIntentProtocol {
         to: dlnQuote.tx.to,
       });
 
-      if (!dlnQuote.tx.to || !dlnQuote.tx.data) {
-        logger.error('Invalid DLN quote: Missing transaction "to" or "data" field');
-        throw sdkError(
-          SdkErrorEnum.QUOTE_NOT_FOUND,
-          'Invalid DLN quote: Missing transaction "to" or "data" field',
-        );
-      }
-
       const isSourceSolana = isSolanaNetwork(params.networkIn);
       const evmExecutionPayload: EvmQuoteExecutionPayload | undefined = isSourceSolana
         ? undefined
         : {
             transactionData: {
               data: dlnQuote.tx.data,
-              to: dlnQuote.tx.to,
+              to: dlnQuote.tx.to || '',
               value: dlnQuote.tx.value || '0',
             },
             approval: {
@@ -277,14 +270,12 @@ export class DeBridgeService implements IIntentProtocol {
      * Add a recent blockhash to the transaction
      * This is necessary for the transaction to be valid on the Solana network.
      */
-    const rpcUrl = this.rpcUrls[ChainIdEnum.SOLANA];
-    const url: string | undefined = Array.isArray(rpcUrl) ? rpcUrl[0] : rpcUrl;
 
-    if (!url) {
+    if (!this.solanaRpcUrl) {
       throw sdkError(SdkErrorEnum.MISSING_RPC_URL, 'No RPC URL provided for Solana network');
     }
 
-    const connection = new Connection(url, 'confirmed');
+    const connection = new Connection(this.solanaRpcUrl, 'confirmed');
     const recentBlockhash = await connection.getLatestBlockhash('confirmed');
     versionedTx.message.recentBlockhash = recentBlockhash.blockhash;
 

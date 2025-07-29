@@ -3,6 +3,7 @@ import { ChainIdEnum } from '../../types/enums';
 export type DeBridgeConfig = {
   deBridgePrivateUrl?: string;
   debridgeAccessToken?: string;
+  solanaRpcUrl?: string;
 };
 
 export type DeBridgePriceParams = {
