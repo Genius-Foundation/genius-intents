@@ -39,6 +39,11 @@ import { EvmTransactionData } from './types/evm-transaction-data';
 import { Erc20Service } from './lib/erc20/erc20.service';
 import { AcrossService } from './protocols/across/across.service';
 import { AcrossConfig } from './protocols/across/across.types';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from './types/quote-execution-payload';
+import { JsonRpcProvider } from 'ethers';
 
 let logger: ILogger;
 
@@ -307,6 +312,15 @@ export class GeniusIntents {
     const startTime = Date.now();
     const compatibleProtocols = this.getCompatibleProtocols(params);
 
+    if (this.config.simulateQuotes || this.config.checkApprovals) {
+      if (!this.config.rcps?.[params.networkIn]) {
+        throw sdkError(
+          SdkErrorEnum.MISSING_RPC_URL,
+          'rcps are required for quote simulation and approval checks',
+        );
+      }
+    }
+
     if (compatibleProtocols.length === 0) {
       throw sdkError(
         SdkErrorEnum.INVALID_PARAMS,
@@ -438,7 +452,12 @@ export class GeniusIntents {
           results.push(result);
 
           // If this is the first successful result and we don't have a winner yet
-          if (!winner && !result.error) {
+          if (
+            !winner &&
+            !result.error &&
+            result.response?.amountOut &&
+            BigInt(result.response.amountOut) > BigInt(0)
+          ) {
             winner = result;
           }
         } catch (error) {
@@ -533,6 +552,73 @@ export class GeniusIntents {
     };
   }
 
+  protected async simulateQuote(result: IntentQuoteResult): Promise<boolean> {
+    if (!result.response) {
+      return false;
+    }
+
+    if (result.response.evmExecutionPayload) {
+      return this.simulateQuoteEvm(
+        result.response.networkIn,
+        result.response.from,
+        result.response.evmExecutionPayload,
+      );
+    }
+
+    if (result.response.svmExecutionPayload) {
+      return this.simulateQuoteSvm(result.response.svmExecutionPayload);
+    }
+
+    return false;
+  }
+
+  protected async simulateQuoteEvm(
+    network: ChainIdEnum,
+    from: string,
+    evmExecutionPayload: EvmQuoteExecutionPayload,
+  ): Promise<boolean> {
+    if (this.config.customEvmSimulation) {
+      return this.config.customEvmSimulation(network, from, evmExecutionPayload);
+    }
+
+    const rpcUrl = this.config.rcps?.[network];
+    if (!rpcUrl) {
+      return false;
+    }
+
+    try {
+      const provider = new JsonRpcProvider(rpcUrl);
+      await provider.estimateGas({
+        to: evmExecutionPayload.transactionData.to,
+        data: evmExecutionPayload.transactionData.data,
+        value: evmExecutionPayload.transactionData.value,
+        from,
+      });
+    } catch (error) {
+      logger.error(
+        'Error estimating gas for evm quote simulation',
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  protected async simulateQuoteSvm(
+    svmExecutionPayload: SvmQuoteExecutionPayload,
+  ): Promise<boolean> {
+    if (this.config.customSvmSimulation) {
+      return this.config.customSvmSimulation(svmExecutionPayload);
+    }
+
+    const rpcUrl = this.config.rcps?.[ChainIdEnum.SOLANA];
+    if (!rpcUrl) {
+      return false;
+    }
+    // TODO: Estimate gas for the solana execution payload
+    return true;
+  }
   /**
    * Get list of initialized protocols
    */

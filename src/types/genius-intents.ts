@@ -12,6 +12,7 @@ import { OpenOceanConfig } from '../protocols/openocean/openocean.types';
 import { AftermathConfig } from '../protocols/aftermath/aftermath.types';
 import { ZeroXConfig } from '../protocols/zeroX/zeroX.types';
 import { AcrossConfig } from '../protocols/across';
+import { EvmQuoteExecutionPayload, SvmQuoteExecutionPayload } from './quote-execution-payload';
 
 /**
  * Configuration interface for IntentsProtocols class
@@ -46,6 +47,26 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
      * @requires rpcs to be provided in the config
      */
     checkApprovals?: boolean;
+
+    /**
+     * When fetching a quote, it will be simulated to check if the quote is valid
+     * @requires rpcs to be provided in the config
+     */
+    simulateQuotes?: boolean;
+
+    /**
+     * Custom simulation function to use for evm quote simulation
+     */
+    customEvmSimulation?: (
+      network: number,
+      from: string,
+      evmExecutionPayload: EvmQuoteExecutionPayload,
+    ) => Promise<boolean>;
+
+    /**
+     * Custom simulation function to use for svm quote simulation
+     */
+    customSvmSimulation?: (svmExecutionPayload: SvmQuoteExecutionPayload) => Promise<boolean>;
 
     /**
      * Specific protocols to include (if not specified, all compatible protocols will be used)
