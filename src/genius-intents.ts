@@ -23,6 +23,7 @@ import { AftermathConfig } from './protocols/aftermath/aftermath.types';
 import { ZeroXConfig } from './protocols/zeroX/zeroX.types';
 import { DeBridgeConfig } from './protocols/debridge/debridge.types';
 import { GeniusBridgeConfig } from './protocols/genius-bridge/genius-bridge.types';
+import { toQuantity } from 'ethers';
 
 // Import all available protocol services
 import { OdosService } from './protocols/odos/odos.service';
@@ -707,9 +708,7 @@ export class GeniusIntents {
         {
           to: evmExecutionPayload.transactionData.to,
           data: evmExecutionPayload.transactionData.data,
-          value: evmExecutionPayload.transactionData.value.startsWith('0x')
-            ? evmExecutionPayload.transactionData.value
-            : `0x${evmExecutionPayload.transactionData.value}`,
+          value: toQuantity(evmExecutionPayload.transactionData.value),
           from,
         },
         'latest',
@@ -719,6 +718,9 @@ export class GeniusIntents {
               ...approvalSlots,
               ...balanceSlots,
             },
+          },
+          [from]: {
+            balance: '0x9999999999999999999999999999999999',
           },
         },
       ]);

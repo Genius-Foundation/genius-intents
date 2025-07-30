@@ -177,20 +177,7 @@ export class OpenOceanService implements IIntentProtocol {
         estimatedGas: quoteData.estimatedGas,
       });
 
-      const evmExecutionPayload: EvmQuoteExecutionPayload = {
-        transactionData: {
-          data: quoteData.data,
-          to: quoteData.to,
-          value: quoteData.value,
-          gasEstimate: quoteData.estimatedGas.toString(),
-          gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
-        },
-        approval: {
-          token: tokenIn,
-          amount: amountIn,
-          spender: quoteData.to,
-        },
-      };
+      let evmExecutionPayload: EvmQuoteExecutionPayload | undefined = undefined;
       let solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = undefined;
 
       if (isSolanaNetwork(networkIn) && quoteData.data) {
@@ -218,6 +205,21 @@ export class OpenOceanService implements IIntentProtocol {
         }
 
         solanaExecutionPayload = [swapTransaction];
+      } else {
+        evmExecutionPayload = {
+          transactionData: {
+            data: quoteData.data,
+            to: quoteData.to,
+            value: quoteData.value,
+            gasEstimate: quoteData.estimatedGas.toString(),
+            gasLimit: (parseInt(quoteData.estimatedGas) * 1.1).toString(), // 10% buffer
+          },
+          approval: {
+            token: tokenIn,
+            amount: amountIn,
+            spender: quoteData.to,
+          },
+        };
       }
 
       return {
@@ -228,8 +230,8 @@ export class OpenOceanService implements IIntentProtocol {
         amountOut: quoteData.outAmount,
         from,
         receiver: receiver || from,
-        evmExecutionPayload: solanaExecutionPayload ? undefined : evmExecutionPayload,
-        svmExecutionPayload: solanaExecutionPayload,
+        evmExecutionPayload: isSolanaNetwork(networkIn) ? undefined : evmExecutionPayload,
+        svmExecutionPayload: isSolanaNetwork(networkIn) ? solanaExecutionPayload : undefined,
         slippage,
         networkIn,
         networkOut,
