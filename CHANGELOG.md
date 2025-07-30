@@ -1,3 +1,28 @@
+## [0.9.1] - 2025-07-30
+
+### [0.9.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.0...v0.9.1) (2025-07-30)
+
+
+### Bug Fixes
+
+* support estimates for natives as tokenIn ([ec6bb2f](https://github.com/Genius-Foundation/genius-intents/commit/ec6bb2ffd1a9a4ec3cab7af2d76285ed2d8e31f7))
+* update solana simulations to standard sims when jito is not required ([#49](https://github.com/Genius-Foundation/genius-intents/issues/49)) ([7dd6400](https://github.com/Genius-Foundation/genius-intents/commit/7dd64007a2c7bdd390c632a96f935ed86a727c9e))
+
+
+### Code Refactoring
+
+* restructure EVM execution payload handling in OpenOceanService ([2cb1272](https://github.com/Genius-Foundation/genius-intents/commit/2cb12723641dfcd6ae7d126afaa32ce34c8b9d4a))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.9.0 ([f48923d](https://github.com/Genius-Foundation/genius-intents/commit/f48923db34d7ee09ad003e74e8e6aa08ef4167cb))
+
+
+
+---
+
+
 ## [0.9.0] - 2025-07-29
 
 ## [0.9.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.8.4...v0.9.0) (2025-07-29)
