@@ -44,7 +44,8 @@ import {
   SvmQuoteExecutionPayload,
 } from './types/quote-execution-payload';
 import { JsonRpcProvider, ethers } from 'ethers';
-import simulateJito from './utils/jito';
+import simulateJito, { ITXSimulationResults } from './utils/jito';
+import simulateSolana from './utils/simulate-solana';
 
 let logger: ILogger;
 
@@ -749,7 +750,6 @@ export class GeniusIntents {
     if (this.config.customSvmSimulation) {
       return this.config.customSvmSimulation(svmExecutionPayload);
     }
-
     const rpcUrl = this.config.rpcs?.[ChainIdEnum.SOLANA];
     if (!rpcUrl) {
       return {
@@ -757,17 +757,18 @@ export class GeniusIntents {
         simulationError: new Error('No RPC URL found'),
       };
     }
-
-    if (!this.config.jitoRpc) {
-      return {
-        simulationSuccess: false,
-        simulationError: new Error('No Jito RPC URL found'),
-      };
+    let simulationResult: ITXSimulationResults;
+    if (svmExecutionPayload?.length > 1) {
+      if (!this.config.jitoRpc) {
+        return {
+          simulationSuccess: false,
+          simulationError: new Error('No Jito RPC URL found'),
+        };
+      }
+      simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
+    } else {
+      simulationResult = await simulateSolana(rpcUrl, svmExecutionPayload[0] as string);
     }
-
-    // Simulate using Jito
-    const simulationResult = await simulateJito(this.config.jitoRpc, rpcUrl, svmExecutionPayload);
-
     if (!simulationResult.simsPassed) {
       logger.error(
         'Solana quote simulation failed',
