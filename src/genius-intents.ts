@@ -596,7 +596,7 @@ export class GeniusIntents {
     for (let i = 0; i < maxSlots; i++) {
       const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, i]));
       const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
-      storage[outer] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+      storage[outer] = '0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
     }
 
     return storage;
@@ -608,7 +608,7 @@ export class GeniusIntents {
 
     for (let i = 0; i < maxSlots; i++) {
       const slotHash = ethers.keccak256(abi.encode(['address', 'uint256'], [owner, i]));
-      storage[slotHash] = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+      storage[slotHash] = '0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
     }
 
     return storage;
