@@ -1,3 +1,22 @@
+## [0.9.3] - 2025-08-01
+
+### [0.9.3](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.2...v0.9.3) (2025-08-01)
+
+
+### Bug Fixes
+
+* rename gasEstimate to quoteGasEstimate and add approvalGasEstimate in GeniusIntentsConfig ([ea97d2c](https://github.com/Genius-Foundation/genius-intents/commit/ea97d2c8cdd33d3dfe6e25c85d897b99102d6e71))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.9.2 ([271281c](https://github.com/Genius-Foundation/genius-intents/commit/271281c24f5b59ae6691c1367ec16feed9018ba8))
+
+
+
+---
+
+
 ## [0.9.2] - 2025-08-01
 
 ### [0.9.2](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.1...v0.9.2) (2025-08-01)
