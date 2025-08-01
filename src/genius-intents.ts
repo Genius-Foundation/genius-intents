@@ -14,32 +14,11 @@ import {
   IntentRaceExecutionResult,
 } from './types/genius-intents';
 import { GeniusIntentsSDKConfig } from './types/sdk-config';
-import { JupiterConfig } from './protocols/jupiter/jupiter.types';
-import { RaydiumSdkConfig } from './protocols/raydium/raydium-v2.types';
-import { OpenOceanConfig } from './protocols/openocean/openocean.types';
-import { OKXConfig } from './protocols/okx/okx.types';
-import { KyberswapConfig } from './protocols/kyberswap/kyberswap.types';
-import { AftermathConfig } from './protocols/aftermath/aftermath.types';
-import { ZeroXConfig } from './protocols/zeroX/zeroX.types';
-import { DeBridgeConfig } from './protocols/debridge/debridge.types';
-import { GeniusBridgeConfig } from './protocols/genius-bridge/genius-bridge.types';
 import { toQuantity } from 'ethers';
 
-// Import all available protocol services
-import { OdosService } from './protocols/odos/odos.service';
-import { RaydiumV2Service } from './protocols/raydium/raydium-v2.service';
-import { JupiterService } from './protocols/jupiter/jupiter.service';
-import { OpenOceanService } from './protocols/openocean/openocean.service';
-import { OkxService } from './protocols/okx/okx.service';
-import { KyberswapService } from './protocols/kyberswap/kyberswap.service';
-import { AftermathService } from './protocols/aftermath/aftermath.service';
-import { ZeroXService } from './protocols/zeroX/zeroX.service';
-import { DeBridgeService } from './protocols/debridge/debridge.service';
-import { GeniusBridgeService } from './protocols/genius-bridge/genius-bridge.service';
+// Remove static imports of protocol services - they will be loaded dynamically
 import { EvmTransactionData } from './types/evm-transaction-data';
 import { Erc20Service } from './lib/erc20/erc20.service';
-import { AcrossService } from './protocols/across/across.service';
-import { AcrossConfig } from './protocols/across/across.types';
 import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
@@ -49,9 +28,87 @@ import simulateJito from './utils/jito';
 
 let logger: ILogger;
 
+// Protocol module loading configuration
+interface IProtocolModuleConfig {
+  protocol: ProtocolEnum;
+  modulePath: string;
+  serviceName: string;
+  configType?: string;
+}
+
+const PROTOCOL_MODULES: IProtocolModuleConfig[] = [
+  {
+    protocol: ProtocolEnum.ODOS,
+    modulePath: './protocols/odos/odos.service',
+    serviceName: 'OdosService',
+  },
+  {
+    protocol: ProtocolEnum.JUPITER,
+    modulePath: './protocols/jupiter/jupiter.service',
+    serviceName: 'JupiterService',
+    configType: 'JupiterConfig',
+  },
+  {
+    protocol: ProtocolEnum.RAYDIUM_V2,
+    modulePath: './protocols/raydium/raydium-v2.service',
+    serviceName: 'RaydiumV2Service',
+    configType: 'RaydiumSdkConfig',
+  },
+  {
+    protocol: ProtocolEnum.OPEN_OCEAN,
+    modulePath: './protocols/openocean/openocean.service',
+    serviceName: 'OpenOceanService',
+    configType: 'OpenOceanConfig',
+  },
+  {
+    protocol: ProtocolEnum.OKX,
+    modulePath: './protocols/okx/okx.service',
+    serviceName: 'OkxService',
+    configType: 'OKXConfig',
+  },
+  {
+    protocol: ProtocolEnum.KYBERSWAP,
+    modulePath: './protocols/kyberswap/kyberswap.service',
+    serviceName: 'KyberswapService',
+    configType: 'KyberswapConfig',
+  },
+  {
+    protocol: ProtocolEnum.AFTERMATH,
+    modulePath: './protocols/aftermath/aftermath.service',
+    serviceName: 'AftermathService',
+    configType: 'AftermathConfig',
+  },
+  {
+    protocol: ProtocolEnum.ZEROX,
+    modulePath: './protocols/zeroX/zeroX.service',
+    serviceName: 'ZeroXService',
+    configType: 'ZeroXConfig',
+  },
+  {
+    protocol: ProtocolEnum.DEBRIDGE,
+    modulePath: './protocols/debridge/debridge.service',
+    serviceName: 'DeBridgeService',
+    configType: 'DeBridgeConfig',
+  },
+  {
+    protocol: ProtocolEnum.GENIUS_BRIDGE,
+    modulePath: './protocols/genius-bridge/genius-bridge.service',
+    serviceName: 'GeniusBridgeService',
+    configType: 'GeniusBridgeConfig',
+  },
+  {
+    protocol: ProtocolEnum.ACROSS,
+    modulePath: './protocols/across/across.service',
+    serviceName: 'AcrossService',
+    configType: 'AcrossConfig',
+  },
+];
+
 export class GeniusIntents {
   protected config: GeniusIntentsConfig;
   protected protocols: Map<ProtocolEnum, IIntentProtocol> = new Map();
+  private _protocolsInitialized = false;
+  private _initializationPromise: Promise<void> | null = null;
 
   constructor(config: GeniusIntentsConfig = {}) {
     // Configure logging
@@ -80,138 +137,92 @@ export class GeniusIntents {
         [ChainIdEnum.SUI]: config.suiRpcUrl || config.rpcs?.[ChainIdEnum.SUI] || '',
       },
     };
-
-    this.initializeProtocols();
   }
 
   /**
-   * Initialize all available protocol instances
+   * Ensure protocols are initialized (lazy loading)
    */
-  protected initializeProtocols(): void {
-    const protocolFactories: Array<{
-      protocol: ProtocolEnum;
-      factory: () => IIntentProtocol | null;
-    }> = [
-      {
-        protocol: ProtocolEnum.ODOS,
-        factory: () =>
-          this.createProtocolSafely(
-            () => new OdosService(this.config as unknown as GeniusIntentsSDKConfig),
-            'ODOS',
-          ),
-      },
-      {
-        protocol: ProtocolEnum.JUPITER,
-        factory: () =>
-          this.createProtocolSafely(
-            () =>
-              new JupiterService(this.config as unknown as GeniusIntentsSDKConfig & JupiterConfig),
-            'JUPITER',
-          ),
-      },
-      {
-        protocol: ProtocolEnum.RAYDIUM_V2,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new RaydiumV2Service(
-              this.config as unknown as GeniusIntentsSDKConfig & RaydiumSdkConfig,
-            );
-          }, 'RAYDIUM_V2'),
-      },
-      {
-        protocol: ProtocolEnum.OPEN_OCEAN,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new OpenOceanService(
-              this.config as unknown as GeniusIntentsSDKConfig & OpenOceanConfig,
-            );
-          }, 'OPEN_OCEAN'),
-      },
-      {
-        protocol: ProtocolEnum.OKX,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new OkxService(this.config as unknown as GeniusIntentsSDKConfig & OKXConfig);
-          }, 'OKX'),
-      },
-      {
-        protocol: ProtocolEnum.KYBERSWAP,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new KyberswapService(
-              this.config as unknown as GeniusIntentsSDKConfig & KyberswapConfig,
-            );
-          }, 'KYBERSWAP'),
-      },
-      {
-        protocol: ProtocolEnum.AFTERMATH,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new AftermathService(
-              this.config as unknown as GeniusIntentsSDKConfig & AftermathConfig,
-            );
-          }, 'AFTERMATH'),
-      },
-      {
-        protocol: ProtocolEnum.ZEROX,
-        factory: () =>
-          this.createProtocolSafely(() => {
-            return new ZeroXService(this.config as unknown as GeniusIntentsSDKConfig & ZeroXConfig);
-          }, 'ZEROX'),
-      },
-      {
-        protocol: ProtocolEnum.DEBRIDGE,
-        factory: () =>
-          this.createProtocolSafely(
-            () =>
-              new DeBridgeService(
-                this.config as unknown as GeniusIntentsSDKConfig & DeBridgeConfig,
-              ),
-            'DEBRIDGE',
-          ),
-      },
-      {
-        protocol: ProtocolEnum.GENIUS_BRIDGE,
-        factory: () =>
-          this.createProtocolSafely(
-            () =>
-              new GeniusBridgeService(
-                this.config as unknown as GeniusIntentsSDKConfig & GeniusBridgeConfig,
-              ),
-            'GENIUS_BRIDGE',
-          ),
-      },
-      {
-        protocol: ProtocolEnum.ACROSS,
-        factory: () =>
-          this.createProtocolSafely(
-            () =>
-              new AcrossService(this.config as unknown as GeniusIntentsSDKConfig & AcrossConfig),
-            'ACROSS',
-          ),
-      },
-    ];
+  protected async ensureProtocolsInitialized(): Promise<void> {
+    if (this._protocolsInitialized) {
+      return;
+    }
 
-    // Initialize protocols based on configuration
-    for (const { protocol, factory } of protocolFactories) {
+    if (this._initializationPromise) {
+      await this._initializationPromise;
+      return;
+    }
+
+    this._initializationPromise = this.initializeProtocols();
+    await this._initializationPromise;
+    this._protocolsInitialized = true;
+  }
+
+  /**
+   * Initialize protocol instances dynamically based on configuration
+   */
+  protected async initializeProtocols(): Promise<void> {
+    const protocolsToLoad = PROTOCOL_MODULES.filter(moduleConfig => {
       // Skip if specifically excluded
-      if (this.config.excludeProtocols?.includes(protocol)) {
-        continue;
+      if (this.config.excludeProtocols?.includes(moduleConfig.protocol)) {
+        logger.debug(`Skipping excluded protocol: ${moduleConfig.protocol}`);
+        return false;
       }
 
       // Skip if includeProtocols is specified and this protocol is not included
-      if (this.config.includeProtocols && !this.config.includeProtocols.includes(protocol)) {
-        continue;
+      if (
+        this.config.includeProtocols &&
+        !this.config.includeProtocols.includes(moduleConfig.protocol)
+      ) {
+        logger.debug(`Skipping non-included protocol: ${moduleConfig.protocol}`);
+        return false;
       }
 
-      const protocolInstance = factory();
-      if (protocolInstance) {
-        this.protocols.set(protocol, protocolInstance);
-        logger.debug(`Initialized protocol: ${protocol}`);
-      }
-    }
+      return true;
+    });
 
-    logger.info(`Initialized ${this.protocols.size} protocols`);
+    logger.info(`Loading ${protocolsToLoad.length} protocols dynamically`);
+
+    // Load protocols in parallel
+    const loadPromises = protocolsToLoad.map(async moduleConfig => {
+      try {
+        const module = await import(moduleConfig.modulePath);
+        const serviceClass = module[moduleConfig.serviceName];
+
+        if (!serviceClass) {
+          logger.error(
+            `Service class ${moduleConfig.serviceName} not found in ${moduleConfig.modulePath}`,
+          );
+          return null;
+        }
+
+        // Create service instance with appropriate config
+        let serviceInstance: IIntentProtocol;
+        if (moduleConfig.configType) {
+          // For services that need specific config types
+          serviceInstance = new serviceClass(this.config as unknown as GeniusIntentsSDKConfig);
+        } else {
+          // For services that only need the base config
+          serviceInstance = new serviceClass(this.config as unknown as GeniusIntentsSDKConfig);
+        }
+
+        this.protocols.set(moduleConfig.protocol, serviceInstance);
+        logger.debug(`Successfully loaded protocol: ${moduleConfig.protocol}`);
+        return moduleConfig.protocol;
+      } catch (error: unknown) {
+        logger.error(
+          `Failed to load protocol ${moduleConfig.protocol}:`,
+          error instanceof Error ? error : new Error('Unknown error'),
+        );
+        return null;
+      }
+    });
+
+    const loadedProtocols = await Promise.all(loadPromises);
+    const successfulLoads = loadedProtocols.filter(Boolean);
+
+    logger.info(
+      `Successfully initialized ${successfulLoads.length} protocols: ${successfulLoads.join(', ')}`,
+    );
   }
 
   /**
@@ -222,20 +233,12 @@ export class GeniusIntents {
     protocolName: string,
   ): IIntentProtocol | null {
     try {
-      // First check if the config is valid for this protocol by creating a temporary instance
-      const tempInstance = factory();
-
-      // Check if the config is correct for this protocol
-      if (!tempInstance.isCorrectConfig(this.config as { [key: string]: string })) {
-        logger.debug(`Skipping protocol ${protocolName} due to invalid config`);
-        return null;
-      }
-
-      return tempInstance;
-    } catch (error) {
-      logger.warn(`Failed to initialize protocol ${protocolName}`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      return factory();
+    } catch (error: unknown) {
+      logger.error(
+        `Failed to initialize ${protocolName} protocol:`,
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
       return null;
     }
   }
@@ -243,12 +246,19 @@ export class GeniusIntents {
   /**
    * Get compatible protocols for the given parameters
    */
-  protected getCompatibleProtocols(
+  protected async getCompatibleProtocols(
     params: IntentPriceParams | IntentQuoteParams,
-  ): IIntentProtocol[] {
+  ): Promise<IIntentProtocol[]> {
+    await this.ensureProtocolsInitialized();
+
     const compatibleProtocols: IIntentProtocol[] = [];
 
     for (const protocol of this.protocols.values()) {
+      // Skip if protocol is undefined or doesn't have required properties
+      if (!protocol || !protocol.chains) {
+        continue;
+      }
+
       // Check if protocol supports the required chains
       const isSameChain = params.networkIn === params.networkOut;
       const supportsNetworkIn = protocol.chains.includes(params.networkIn as ChainIdEnum);
@@ -275,7 +285,7 @@ export class GeniusIntents {
    */
   async fetchPrice(params: IntentPriceParams): Promise<GeniusIntentsResults<PriceResponse>> {
     const startTime = Date.now();
-    const compatibleProtocols = this.getCompatibleProtocols(params);
+    const compatibleProtocols = await this.getCompatibleProtocols(params);
 
     if (compatibleProtocols.length === 0) {
       throw sdkError(
@@ -286,7 +296,7 @@ export class GeniusIntents {
 
     logger.info(`Found ${compatibleProtocols.length} compatible protocols for price request`);
 
-    const promises = compatibleProtocols.map(protocol =>
+    const promises = compatibleProtocols.map((protocol: IIntentProtocol) =>
       this.executePriceRequest(protocol, params),
     );
 
@@ -296,11 +306,11 @@ export class GeniusIntents {
     if (this.config.method === 'race') {
       // Race mode: return the first successful response
       const raceResult = await this.executeRace(promises);
-      allResults = raceResult.allResults;
-      result = raceResult.winner?.response;
+      allResults = raceResult.allResults as IntentPriceResult[];
+      result = raceResult.winner?.response as PriceResponse | undefined;
     } else {
       // Best mode: wait for all responses and select the best one
-      allResults = await this.executeAll(promises);
+      allResults = (await this.executeAll(promises)) as IntentPriceResult[];
       result = this.selectBestPriceResponse(allResults);
     }
 
@@ -317,7 +327,6 @@ export class GeniusIntents {
    */
   async fetchQuote(params: IntentQuoteParams): Promise<GeniusIntentsResults<QuoteResponse>> {
     const startTime = Date.now();
-    const compatibleProtocols = this.getCompatibleProtocols(params);
 
     if (this.config.simulateQuotes || this.config.checkApprovals) {
       if (!this.config.rpcs?.[params.networkIn]) {
@@ -328,6 +337,8 @@ export class GeniusIntents {
       }
     }
 
+    const compatibleProtocols = await this.getCompatibleProtocols(params);
+
     if (compatibleProtocols.length === 0) {
       throw sdkError(
         SdkErrorEnum.INVALID_PARAMS,
@@ -337,7 +348,7 @@ export class GeniusIntents {
 
     logger.info(`Found ${compatibleProtocols.length} compatible protocols for quote request`);
 
-    const promises = compatibleProtocols.map(protocol =>
+    const promises = compatibleProtocols.map((protocol: IIntentProtocol) =>
       this.executeQuoteRequest(protocol, params),
     );
 
@@ -347,11 +358,11 @@ export class GeniusIntents {
     if (this.config.method === 'race') {
       // Race mode: return the first successful response
       const raceResult = await this.executeRace(promises);
-      allResults = raceResult.allResults;
-      result = raceResult.winner?.response;
+      allResults = raceResult.allResults as IntentQuoteResult[];
+      result = raceResult.winner?.response as QuoteResponse | undefined;
     } else {
       // Best mode: wait for all responses and select the best one
-      allResults = await this.executeAll(promises);
+      allResults = (await this.executeAll(promises)) as IntentQuoteResult[];
       result = this.selectBestQuoteResponse(allResults);
     }
 
@@ -788,14 +799,16 @@ export class GeniusIntents {
   /**
    * Get list of initialized protocols
    */
-  getInitializedProtocols(): ProtocolEnum[] {
+  async getInitializedProtocols(): Promise<ProtocolEnum[]> {
+    await this.ensureProtocolsInitialized();
     return Array.from(this.protocols.keys());
   }
 
   /**
    * Get a specific protocol instance
    */
-  getProtocol(protocol: ProtocolEnum): IIntentProtocol | undefined {
+  async getProtocol(protocol: ProtocolEnum): Promise<IIntentProtocol | undefined> {
+    await this.ensureProtocolsInitialized();
     return this.protocols.get(protocol);
   }
 
@@ -808,7 +821,8 @@ export class GeniusIntents {
     // Reinitialize protocols if protocol-specific configs changed
     if (config.includeProtocols || config.excludeProtocols) {
       this.protocols.clear();
-      this.initializeProtocols();
+      this._protocolsInitialized = false;
+      this._initializationPromise = null;
     }
   }
 

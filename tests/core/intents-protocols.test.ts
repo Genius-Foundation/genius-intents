@@ -67,13 +67,13 @@ describe('GeniusIntents', () => {
       expect(geniusIntents).toBeDefined();
     });
 
-    test('should respect includeProtocols configuration', () => {
+    test('should respect includeProtocols configuration', async () => {
       const config: GeniusIntentsConfig = {
         includeProtocols: [ProtocolEnum.JUPITER],
       };
 
       geniusIntents = new GeniusIntents(config);
-      const initializedProtocols = geniusIntents.getInitializedProtocols();
+      const initializedProtocols = await geniusIntents.getInitializedProtocols();
       
       // Should only include Jupiter if it's available, or be empty if not
       expect(initializedProtocols.length).toBeLessThanOrEqual(1);
@@ -82,24 +82,28 @@ describe('GeniusIntents', () => {
       }
     });
 
-    test('should respect excludeProtocols configuration', () => {
+    test('should respect excludeProtocols configuration', async () => {
       const config: GeniusIntentsConfig = {
         excludeProtocols: [ProtocolEnum.ODOS],
       };
 
       geniusIntents = new GeniusIntents(config);
-      const initializedProtocols = geniusIntents.getInitializedProtocols();
+      const initializedProtocols = await geniusIntents.getInitializedProtocols();
       
       expect(initializedProtocols).not.toContain(ProtocolEnum.ODOS);
     });
 
-    test('should handle protocol initialization gracefully', () => {
+    test('should handle protocol initialization gracefully', async () => {
       // This test verifies that the class doesn't crash when protocols fail to initialize
       geniusIntents = new GeniusIntents();
       
       // The class should still be functional even if some protocols fail
       expect(geniusIntents).toBeDefined();
       expect(typeof geniusIntents.getInitializedProtocols).toBe('function');
+      
+      // Test that we can get initialized protocols
+      const protocols = await geniusIntents.getInitializedProtocols();
+      expect(Array.isArray(protocols)).toBe(true);
     });
   });
 
@@ -108,21 +112,21 @@ describe('GeniusIntents', () => {
       geniusIntents = new GeniusIntents();
     });
 
-    test('should return list of initialized protocols', () => {
-      const protocols = geniusIntents.getInitializedProtocols();
+    test('should return list of initialized protocols', async () => {
+      const protocols = await geniusIntents.getInitializedProtocols();
       
       expect(Array.isArray(protocols)).toBe(true);
-      protocols.forEach(protocol => {
+      protocols.forEach((protocol: ProtocolEnum) => {
         expect(Object.values(ProtocolEnum)).toContain(protocol);
       });
     });
 
-    test('should get specific protocol instance', () => {
-      const protocols = geniusIntents.getInitializedProtocols();
+    test('should get specific protocol instance', async () => {
+      const protocols = await geniusIntents.getInitializedProtocols();
       
       if (protocols.length > 0) {
         const firstProtocol = protocols[0]!;
-        const protocol = geniusIntents.getProtocol(firstProtocol);
+        const protocol = await geniusIntents.getProtocol(firstProtocol);
         
         // Protocol might be undefined due to mocking, which is expected
         if (protocol && protocol.protocol) {
@@ -137,8 +141,8 @@ describe('GeniusIntents', () => {
       }
     });
 
-    test('should return undefined for non-existent protocol', () => {
-      const protocol = geniusIntents.getProtocol('NON_EXISTENT' as ProtocolEnum);
+    test('should return undefined for non-existent protocol', async () => {
+      const protocol = await geniusIntents.getProtocol('NON_EXISTENT' as ProtocolEnum);
       
       expect(protocol).toBeUndefined();
     });
@@ -263,13 +267,13 @@ describe('GeniusIntents', () => {
       expect(() => geniusIntents.updateConfig(newConfig)).not.toThrow();
     });
 
-    test('should reinitialize protocols when protocol configs change', () => {
+    test('should reinitialize protocols when protocol configs change', async () => {
       const newConfig: Partial<GeniusIntentsConfig> = {
         includeProtocols: [ProtocolEnum.JUPITER],
       };
 
       geniusIntents.updateConfig(newConfig);
-      const updatedProtocols = geniusIntents.getInitializedProtocols();
+      const updatedProtocols = await geniusIntents.getInitializedProtocols();
       
       // The protocols should be reinitialized
       expect(Array.isArray(updatedProtocols)).toBe(true);
