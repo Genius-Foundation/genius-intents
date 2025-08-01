@@ -71,7 +71,8 @@ export type GeniusIntentsConfig = OptionalIntentsProtocolsConfig &
     ) => Promise<{
       simulationSuccess?: boolean;
       simulationError?: Error;
-      gasEstimate?: string;
+      quoteGasEstimate?: string;
+      approvalGasEstimate?: string;
     }>;
 
     /**
