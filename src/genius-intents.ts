@@ -587,7 +587,7 @@ export class GeniusIntents {
   protected generateAllowanceOverrides(
     owner: string,
     spender: string,
-    maxSlots = 10,
+    maxSlots = 15,
   ): Record<string, string> {
     const abiCoder = new ethers.AbiCoder();
 
@@ -596,7 +596,7 @@ export class GeniusIntents {
     for (let i = 0; i < maxSlots; i++) {
       const inner = ethers.keccak256(abiCoder.encode(['address', 'uint256'], [owner, i]));
       const outer = ethers.keccak256(abiCoder.encode(['address', 'bytes32'], [spender, inner]));
-      storage[outer] = '0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
+      storage[outer] = '0xfFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
     }
 
     return storage;
