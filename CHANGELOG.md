@@ -1,3 +1,23 @@
+## [0.9.2] - 2025-08-01
+
+### [0.9.2](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.1...v0.9.2) (2025-08-01)
+
+
+### Bug Fixes
+
+* increase maxSlots in generateAllowanceOverrides and update storage value ([2429693](https://github.com/Genius-Foundation/genius-intents/commit/2429693c7687ead59bc0d479ee004bfbbf929862))
+* update override simulations slots so no blacklisting usdc ([7be1e74](https://github.com/Genius-Foundation/genius-intents/commit/7be1e74c7ac69738a127fb156ca005a553c5601d))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.9.1 ([7405884](https://github.com/Genius-Foundation/genius-intents/commit/74058845b358548ab1d09e8430cfa295080c79ac))
+
+
+
+---
+
+
 ## [0.9.1] - 2025-07-30
 
 ### [0.9.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.0...v0.9.1) (2025-07-30)
