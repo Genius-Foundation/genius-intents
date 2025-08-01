@@ -1,3 +1,22 @@
+## [0.10.0] - 2025-08-01
+
+## [0.10.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.3...v0.10.0) (2025-08-01)
+
+
+### Features
+
+* implement dynamic loading of protocol services and improve initialization logic in GeniusIntents ([9cdec62](https://github.com/Genius-Foundation/genius-intents/commit/9cdec627c0c27fcf754bbcd92fefafc6ccf1ff1a))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.9.3 ([873fa35](https://github.com/Genius-Foundation/genius-intents/commit/873fa35db1a6c960ec572ec755d95720caaedb6b))
+
+
+
+---
+
+
 ## [0.9.3] - 2025-08-01
 
 ### [0.9.3](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.2...v0.9.3) (2025-08-01)
