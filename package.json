@@ -18,61 +18,6 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js"
-    },
-    "./protocols/odos/odos.service": {
-      "types": "./dist/protocols/odos/odos.service.d.ts",
-      "require": "./dist/protocols/odos/odos.service.js",
-      "import": "./dist/protocols/odos/odos.service.js"
-    },
-    "./protocols/jupiter/jupiter.service": {
-      "types": "./dist/protocols/jupiter/jupiter.service.d.ts",
-      "require": "./dist/protocols/jupiter/jupiter.service.js",
-      "import": "./dist/protocols/jupiter/jupiter.service.js"
-    },
-    "./protocols/raydium/raydium-v2.service": {
-      "types": "./dist/protocols/raydium/raydium-v2.service.d.ts",
-      "require": "./dist/protocols/raydium/raydium-v2.service.js",
-      "import": "./dist/protocols/raydium/raydium-v2.service.js"
-    },
-    "./protocols/openocean/openocean.service": {
-      "types": "./dist/protocols/openocean/openocean.service.d.ts",
-      "require": "./dist/protocols/openocean/openocean.service.js",
-      "import": "./dist/protocols/openocean/openocean.service.js"
-    },
-    "./protocols/okx/okx.service": {
-      "types": "./dist/protocols/okx/okx.service.d.ts",
-      "require": "./dist/protocols/okx/okx.service.js",
-      "import": "./dist/protocols/okx/okx.service.js"
-    },
-    "./protocols/kyberswap/kyberswap.service": {
-      "types": "./dist/protocols/kyberswap/kyberswap.service.d.ts",
-      "require": "./dist/protocols/kyberswap/kyberswap.service.js",
-      "import": "./dist/protocols/kyberswap/kyberswap.service.js"
-    },
-    "./protocols/aftermath/aftermath.service": {
-      "types": "./dist/protocols/aftermath/aftermath.service.d.ts",
-      "require": "./dist/protocols/aftermath/aftermath.service.js",
-      "import": "./dist/protocols/aftermath/aftermath.service.js"
-    },
-    "./protocols/zeroX/zeroX.service": {
-      "types": "./dist/protocols/zeroX/zeroX.service.d.ts",
-      "require": "./dist/protocols/zeroX/zeroX.service.js",
-      "import": "./dist/protocols/zeroX/zeroX.service.js"
-    },
-    "./protocols/debridge/debridge.service": {
-      "types": "./dist/protocols/debridge/debridge.service.d.ts",
-      "require": "./dist/protocols/debridge/debridge.service.js",
-      "import": "./dist/protocols/debridge/debridge.service.js"
-    },
-    "./protocols/genius-bridge/genius-bridge.service": {
-      "types": "./dist/protocols/genius-bridge/genius-bridge.service.d.ts",
-      "require": "./dist/protocols/genius-bridge/genius-bridge.service.js",
-      "import": "./dist/protocols/genius-bridge/genius-bridge.service.js"
-    },
-    "./protocols/across/across.service": {
-      "types": "./dist/protocols/across/across.service.d.ts",
-      "require": "./dist/protocols/across/across.service.js",
-      "import": "./dist/protocols/across/across.service.js"
     }
   },
   "keywords": [
