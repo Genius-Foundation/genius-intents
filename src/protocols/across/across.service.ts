@@ -8,11 +8,16 @@ import { PriceResponse } from '../../types/price-response';
 import { QuoteResponse } from '../../types/quote-response';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { NATIVE_ADDRESS } from '../../utils/constants';
-import { AcrossClient, createAcrossClient } from '@across-protocol/app-sdk';
 import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { createErrorMessage } from '../../utils/create-error-message';
+
+// Dynamic import types for Across SDK
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AcrossClient = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CreateAcrossClientFunction = (config: any) => AcrossClient;
 
 let logger: ILogger;
 
@@ -30,9 +35,10 @@ export class AcrossService implements IIntentProtocol {
     ChainIdEnum.BSC,
   ];
 
-  protected acrossClient: AcrossClient;
-
+  protected acrossClient: AcrossClient | null = null;
+  protected config: GeniusIntentsSDKConfig & AcrossConfig;
   protected fillDeadlineS: number = 21600;
+  private _initialized = false;
 
   constructor(config: GeniusIntentsSDKConfig & AcrossConfig) {
     if (config?.debug) {
@@ -44,10 +50,7 @@ export class AcrossService implements IIntentProtocol {
     }
     logger = LoggerFactory.getLogger();
 
-    this.acrossClient = createAcrossClient({
-      integratorId: config.acrossIntegratorId,
-      chains: [],
-    });
+    this.config = config;
 
     if (config.acrossFillDeadlineS) {
       this.fillDeadlineS = config.acrossFillDeadlineS;
@@ -59,8 +62,42 @@ export class AcrossService implements IIntentProtocol {
     });
   }
 
+  /**
+   * Initialize the Across client dynamically
+   */
+  protected async initializeAcrossClient(): Promise<void> {
+    if (this._initialized) {
+      return;
+    }
+
+    try {
+      const acrossSdk = await import('@across-protocol/app-sdk');
+      const createAcrossClient = acrossSdk.createAcrossClient as CreateAcrossClientFunction;
+
+      this.acrossClient = createAcrossClient({
+        integratorId: this.config.acrossIntegratorId,
+        chains: [],
+      });
+
+      this._initialized = true;
+      logger.debug('Across client initialized successfully');
+    } catch (error: unknown) {
+      logger.error(
+        'Failed to initialize Across client:',
+        error instanceof Error ? error : new Error('Unknown error'),
+      );
+      throw new Error('Failed to initialize Across client');
+    }
+  }
+
   public async fetchPrice(params: IntentPriceParams): Promise<PriceResponse> {
     try {
+      await this.initializeAcrossClient();
+
+      if (!this.acrossClient) {
+        throw new Error('Across client not initialized');
+      }
+
       logger.debug('Fetching price from Across', {
         networkIn: params.networkIn,
         networkOut: params.networkOut,
@@ -111,6 +148,12 @@ export class AcrossService implements IIntentProtocol {
 
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
     try {
+      await this.initializeAcrossClient();
+
+      if (!this.acrossClient) {
+        throw new Error('Across client not initialized');
+      }
+
       logger.debug('Fetching quote from Across', params);
 
       const validatedParams = this.validateQuoteParams(params);
