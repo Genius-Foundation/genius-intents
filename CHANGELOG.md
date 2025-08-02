@@ -1,3 +1,22 @@
+## [0.10.1] - 2025-08-02
+
+### [0.10.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.10.0...v0.10.1) (2025-08-02)
+
+
+### Code Refactoring
+
+* enhance error handling and implement dynamic initialization for Across client in AcrossService ([31f8584](https://github.com/Genius-Foundation/genius-intents/commit/31f85845f636974a7b48b251880bce93530eb08c))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.10.0 ([379eebe](https://github.com/Genius-Foundation/genius-intents/commit/379eebe90096a95fe753302e542898a09389df05))
+
+
+
+---
+
+
 ## [0.10.0] - 2025-08-01
 
 ## [0.10.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.9.3...v0.10.0) (2025-08-01)
