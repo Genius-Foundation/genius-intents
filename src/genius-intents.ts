@@ -209,9 +209,11 @@ export class GeniusIntents {
         logger.debug(`Successfully loaded protocol: ${moduleConfig.protocol}`);
         return moduleConfig.protocol;
       } catch (error: unknown) {
-        logger.error(
-          `Failed to load protocol ${moduleConfig.protocol}:`,
-          error instanceof Error ? error : new Error('Unknown error'),
+        // Log the error but don't throw - this allows other protocols to continue loading
+        logger.warn(
+          `Failed to load protocol ${moduleConfig.protocol}, skipping: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
         );
         return null;
       }
