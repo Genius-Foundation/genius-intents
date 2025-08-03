@@ -1,3 +1,29 @@
+## [0.11.0] - 2025-08-03
+
+## [0.11.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.10.1...v0.11.0) (2025-08-03)
+
+
+### Features
+
+* add individual protocol imports and services to package.json and README for better tree-shaking ([ed2d789](https://github.com/Genius-Foundation/genius-intents/commit/ed2d7895a3d9d9894764ee354284a49ed91203c7))
+
+
+### Code Refactoring
+
+* streamline protocol service imports and initialization in GeniusIntents ([74065fa](https://github.com/Genius-Foundation/genius-intents/commit/74065fa51b659f23391f6e5fb75fa611f084622b))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.10.1 ([0293743](https://github.com/Genius-Foundation/genius-intents/commit/0293743285ce4edd0adc305e9c840c48ab06ae79))
+* update CHANGELOG.md for v0.10.2-develop.0 (beta) ([601ffc8](https://github.com/Genius-Foundation/genius-intents/commit/601ffc85c4a40e4107999c245868d508f32521ab))
+* update CHANGELOG.md for v0.10.2-develop.1 (beta) ([c6bb602](https://github.com/Genius-Foundation/genius-intents/commit/c6bb6028d57a8bd1acfbd1f47e1239110f9bb389))
+
+
+
+---
+
+
 ## [0.10.2-develop.1] - 2025-08-02 (Beta)
 
 🧪 **This is a beta release for testing purposes.**
