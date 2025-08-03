@@ -16,6 +16,19 @@ import {
 import { GeniusIntentsSDKConfig } from './types/sdk-config';
 import { toQuantity } from 'ethers';
 
+// Static imports for all protocols (required for esbuild bundling)
+import { OdosService } from './protocols/odos/odos.service';
+import { JupiterService } from './protocols/jupiter/jupiter.service';
+import { RaydiumV2Service } from './protocols/raydium/raydium-v2.service';
+import { OpenOceanService } from './protocols/openocean/openocean.service';
+import { OkxService } from './protocols/okx/okx.service';
+import { KyberswapService } from './protocols/kyberswap/kyberswap.service';
+import { AftermathService } from './protocols/aftermath/aftermath.service';
+import { ZeroXService } from './protocols/zeroX/zeroX.service';
+import { DeBridgeService } from './protocols/debridge/debridge.service';
+import { GeniusBridgeService } from './protocols/genius-bridge/genius-bridge.service';
+import { AcrossService } from './protocols/across/across.service';
+
 // Remove static imports of protocol services - they will be loaded dynamically
 import { EvmTransactionData } from './types/evm-transaction-data';
 import { Erc20Service } from './lib/erc20/erc20.service';
@@ -28,81 +41,36 @@ import simulateJito from './utils/jito';
 
 let logger: ILogger;
 
-// Protocol module loading configuration
-interface IProtocolModuleConfig {
-  protocol: ProtocolEnum;
-  modulePath: string;
-  serviceName: string;
-  configType?: string;
-}
-
-const PROTOCOL_MODULES: IProtocolModuleConfig[] = [
-  {
-    protocol: ProtocolEnum.ODOS,
-    modulePath: './protocols/odos/odos.service',
-    serviceName: 'OdosService',
-  },
-  {
-    protocol: ProtocolEnum.JUPITER,
-    modulePath: './protocols/jupiter/jupiter.service',
-    serviceName: 'JupiterService',
-    configType: 'JupiterConfig',
-  },
-  {
-    protocol: ProtocolEnum.RAYDIUM_V2,
-    modulePath: './protocols/raydium/raydium-v2.service',
-    serviceName: 'RaydiumV2Service',
-    configType: 'RaydiumSdkConfig',
-  },
-  {
-    protocol: ProtocolEnum.OPEN_OCEAN,
-    modulePath: './protocols/openocean/openocean.service',
-    serviceName: 'OpenOceanService',
-    configType: 'OpenOceanConfig',
-  },
-  {
-    protocol: ProtocolEnum.OKX,
-    modulePath: './protocols/okx/okx.service',
-    serviceName: 'OkxService',
-    configType: 'OKXConfig',
-  },
-  {
-    protocol: ProtocolEnum.KYBERSWAP,
-    modulePath: './protocols/kyberswap/kyberswap.service',
-    serviceName: 'KyberswapService',
-    configType: 'KyberswapConfig',
-  },
-  {
-    protocol: ProtocolEnum.AFTERMATH,
-    modulePath: './protocols/aftermath/aftermath.service',
-    serviceName: 'AftermathService',
-    configType: 'AftermathConfig',
-  },
-  {
-    protocol: ProtocolEnum.ZEROX,
-    modulePath: './protocols/zeroX/zeroX.service',
-    serviceName: 'ZeroXService',
-    configType: 'ZeroXConfig',
-  },
-  {
-    protocol: ProtocolEnum.DEBRIDGE,
-    modulePath: './protocols/debridge/debridge.service',
-    serviceName: 'DeBridgeService',
-    configType: 'DeBridgeConfig',
-  },
-  {
-    protocol: ProtocolEnum.GENIUS_BRIDGE,
-    modulePath: './protocols/genius-bridge/genius-bridge.service',
-    serviceName: 'GeniusBridgeService',
-    configType: 'GeniusBridgeConfig',
-  },
-  {
-    protocol: ProtocolEnum.ACROSS,
-    modulePath: './protocols/across/across.service',
-    serviceName: 'AcrossService',
-    configType: 'AcrossConfig',
-  },
+// Available protocols array
+const AVAILABLE_PROTOCOLS: ProtocolEnum[] = [
+  ProtocolEnum.ODOS,
+  ProtocolEnum.JUPITER,
+  ProtocolEnum.RAYDIUM_V2,
+  ProtocolEnum.OPEN_OCEAN,
+  ProtocolEnum.OKX,
+  ProtocolEnum.KYBERSWAP,
+  ProtocolEnum.AFTERMATH,
+  ProtocolEnum.ZEROX,
+  ProtocolEnum.DEBRIDGE,
+  ProtocolEnum.GENIUS_BRIDGE,
+  ProtocolEnum.ACROSS,
 ];
+
+// Service mapping for static imports (required for esbuild bundling)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SERVICE_MAP: Record<ProtocolEnum, new (config: any) => IIntentProtocol> = {
+  [ProtocolEnum.ODOS]: OdosService,
+  [ProtocolEnum.JUPITER]: JupiterService,
+  [ProtocolEnum.RAYDIUM_V2]: RaydiumV2Service,
+  [ProtocolEnum.OPEN_OCEAN]: OpenOceanService,
+  [ProtocolEnum.OKX]: OkxService,
+  [ProtocolEnum.KYBERSWAP]: KyberswapService,
+  [ProtocolEnum.AFTERMATH]: AftermathService,
+  [ProtocolEnum.ZEROX]: ZeroXService,
+  [ProtocolEnum.DEBRIDGE]: DeBridgeService,
+  [ProtocolEnum.GENIUS_BRIDGE]: GeniusBridgeService,
+  [ProtocolEnum.ACROSS]: AcrossService,
+};
 
 export class GeniusIntents {
   protected config: GeniusIntentsConfig;
@@ -158,60 +126,47 @@ export class GeniusIntents {
   }
 
   /**
-   * Initialize protocol instances dynamically based on configuration
+   * Initialize protocol instances using static imports (compatible with esbuild)
    */
   protected async initializeProtocols(): Promise<void> {
-    const protocolsToLoad = PROTOCOL_MODULES.filter(moduleConfig => {
+    const protocolsToLoad = AVAILABLE_PROTOCOLS.filter(protocol => {
       // Skip if specifically excluded
-      if (this.config.excludeProtocols?.includes(moduleConfig.protocol)) {
-        logger.debug(`Skipping excluded protocol: ${moduleConfig.protocol}`);
+      if (this.config.excludeProtocols?.includes(protocol)) {
+        logger.debug(`Skipping excluded protocol: ${protocol}`);
         return false;
       }
 
       // Skip if includeProtocols is specified and this protocol is not included
-      if (
-        this.config.includeProtocols &&
-        !this.config.includeProtocols.includes(moduleConfig.protocol)
-      ) {
-        logger.debug(`Skipping non-included protocol: ${moduleConfig.protocol}`);
+      if (this.config.includeProtocols && !this.config.includeProtocols.includes(protocol)) {
+        logger.debug(`Skipping non-included protocol: ${protocol}`);
         return false;
       }
 
       return true;
     });
 
-    logger.info(`Loading ${protocolsToLoad.length} protocols dynamically`);
+    logger.info(`Loading ${protocolsToLoad.length} protocols statically`);
 
-    // Load protocols in parallel
-    const loadPromises = protocolsToLoad.map(async moduleConfig => {
+    // Load protocols using static imports (compatible with esbuild)
+    const loadPromises = protocolsToLoad.map(async protocol => {
       try {
-        const module = await import(moduleConfig.modulePath);
-        const serviceClass = module[moduleConfig.serviceName];
+        const serviceClass = SERVICE_MAP[protocol];
 
         if (!serviceClass) {
-          logger.error(
-            `Service class ${moduleConfig.serviceName} not found in ${moduleConfig.modulePath}`,
-          );
+          logger.error(`Service class for protocol ${protocol} not found in SERVICE_MAP`);
           return null;
         }
 
-        // Create service instance with appropriate config
-        let serviceInstance: IIntentProtocol;
-        if (moduleConfig.configType) {
-          // For services that need specific config types
-          serviceInstance = new serviceClass(this.config as unknown as GeniusIntentsSDKConfig);
-        } else {
-          // For services that only need the base config
-          serviceInstance = new serviceClass(this.config as unknown as GeniusIntentsSDKConfig);
-        }
+        // Create service instance with config
+        const serviceInstance = new serviceClass(this.config as unknown as GeniusIntentsSDKConfig);
 
-        this.protocols.set(moduleConfig.protocol, serviceInstance);
-        logger.debug(`Successfully loaded protocol: ${moduleConfig.protocol}`);
-        return moduleConfig.protocol;
+        this.protocols.set(protocol, serviceInstance);
+        logger.debug(`Successfully loaded protocol: ${protocol}`);
+        return protocol;
       } catch (error: unknown) {
         // Log the error but don't throw - this allows other protocols to continue loading
         logger.warn(
-          `Failed to load protocol ${moduleConfig.protocol}, skipping: ${
+          `Failed to load protocol ${protocol}, skipping: ${
             error instanceof Error ? error.message : 'Unknown error'
           }`,
         );

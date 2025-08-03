@@ -1,3 +1,52 @@
+## [0.10.2-develop.1] - 2025-08-02 (Beta)
+
+🧪 **This is a beta release for testing purposes.**
+
+### [0.10.2-develop.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.10.1...v0.10.2-develop.1) (2025-08-02)
+
+
+### Code Refactoring
+
+* streamline protocol service imports and initialization in GeniusIntents ([74065fa](https://github.com/Genius-Foundation/genius-intents/commit/74065fa51b659f23391f6e5fb75fa611f084622b))
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.10.2-develop.0 (beta) ([601ffc8](https://github.com/Genius-Foundation/genius-intents/commit/601ffc85c4a40e4107999c245868d508f32521ab))
+
+
+
+⚠️ **Beta Release Notes:**
+- This version is intended for testing and development
+- May contain experimental features
+- Not recommended for production use
+- Feedback and bug reports are welcome
+
+---
+
+
+## [0.10.2-develop.0] - 2025-08-02 (Beta)
+
+🧪 **This is a beta release for testing purposes.**
+
+### [0.10.2-develop.0](https://github.com/Genius-Foundation/genius-intents/compare/v0.10.1...v0.10.2-develop.0) (2025-08-02)
+
+
+### Documentation
+
+* update CHANGELOG.md for v0.10.1 ([0293743](https://github.com/Genius-Foundation/genius-intents/commit/0293743285ce4edd0adc305e9c840c48ab06ae79))
+
+
+
+⚠️ **Beta Release Notes:**
+- This version is intended for testing and development
+- May contain experimental features
+- Not recommended for production use
+- Feedback and bug reports are welcome
+
+---
+
+
 ## [0.10.1] - 2025-08-02
 
 ### [0.10.1](https://github.com/Genius-Foundation/genius-intents/compare/v0.10.0...v0.10.1) (2025-08-02)
