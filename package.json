@@ -18,6 +18,61 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js"
+    },
+    "./across": {
+      "types": "./dist/protocols/across/index.d.ts",
+      "require": "./dist/protocols/across/index.js",
+      "import": "./dist/protocols/across/index.js"
+    },
+    "./jupiter": {
+      "types": "./dist/protocols/jupiter/index.d.ts",
+      "require": "./dist/protocols/jupiter/index.js",
+      "import": "./dist/protocols/jupiter/index.js"
+    },
+    "./raydium": {
+      "types": "./dist/protocols/raydium/index.d.ts",
+      "require": "./dist/protocols/raydium/index.js",
+      "import": "./dist/protocols/raydium/index.js"
+    },
+    "./okx": {
+      "types": "./dist/protocols/okx/index.d.ts",
+      "require": "./dist/protocols/okx/index.js",
+      "import": "./dist/protocols/okx/index.js"
+    },
+    "./odos": {
+      "types": "./dist/protocols/odos/index.d.ts",
+      "require": "./dist/protocols/odos/index.js",
+      "import": "./dist/protocols/odos/index.js"
+    },
+    "./kyberswap": {
+      "types": "./dist/protocols/kyberswap/index.d.ts",
+      "require": "./dist/protocols/kyberswap/index.js",
+      "import": "./dist/protocols/kyberswap/index.js"
+    },
+    "./openocean": {
+      "types": "./dist/protocols/openocean/index.d.ts",
+      "require": "./dist/protocols/openocean/index.js",
+      "import": "./dist/protocols/openocean/index.js"
+    },
+    "./aftermath": {
+      "types": "./dist/protocols/aftermath/index.d.ts",
+      "require": "./dist/protocols/aftermath/index.js",
+      "import": "./dist/protocols/aftermath/index.js"
+    },
+    "./zeroX": {
+      "types": "./dist/protocols/zeroX/index.d.ts",
+      "require": "./dist/protocols/zeroX/index.js",
+      "import": "./dist/protocols/zeroX/index.js"
+    },
+    "./debridge": {
+      "types": "./dist/protocols/debridge/index.d.ts",
+      "require": "./dist/protocols/debridge/index.js",
+      "import": "./dist/protocols/debridge/index.js"
+    },
+    "./genius-bridge": {
+      "types": "./dist/protocols/genius-bridge/index.d.ts",
+      "require": "./dist/protocols/genius-bridge/index.js",
+      "import": "./dist/protocols/genius-bridge/index.js"
     }
   },
   "keywords": [

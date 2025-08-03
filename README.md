@@ -99,13 +99,124 @@ const jupiterParams: Jupiter.JupiterPriceUrlParams = {
 };
 ```
 
-#### Option 2: Granular Protocol Import
+#### Option 2: Individual Protocol Import (Tree-Shaking Friendly)
 ```typescript
-// Import only what you need for better tree shaking
-import { JupiterService, type JupiterConfig, type JupiterPriceResponse } from 'genius-intents/protocols/jupiter';
-import { OkxService, type OKXConfig } from 'genius-intents/protocols/okx';
+// Import only what you need for better tree shaking and smaller bundle size
+import { JupiterService, type JupiterConfig, type JupiterPriceResponse } from 'genius-intents';
+import { OkxService, type OKXConfig } from 'genius-intents';
+import { RaydiumV2Service, type RaydiumV2QuoteResponse } from 'genius-intents';
 
 const jupiter = new JupiterService({ solanaRpcUrl: 'https://api.mainnet-beta.solana.com' });
+const okx = new OkxService({ 
+  apiKey: 'your-okx-api-key',
+  secretKey: 'your-okx-secret-key',
+  passphrase: 'your-okx-passphrase',
+  projectId: 'your-okx-project-id'
+});
+const raydium = new RaydiumV2Service({ solanaRpcUrl: 'https://api.mainnet-beta.solana.com' });
+
+// This approach only includes the specific protocols you import in your bundle
+
+#### Option 3: Individual Protocol Package Import (Recommended for Tree-Shaking)
+```typescript
+// Import individual protocols as separate packages for optimal tree-shaking
+import { AcrossService, type AcrossConfig } from 'genius-intents/across';
+import { JupiterService, type JupiterConfig } from 'genius-intents/jupiter';
+import { OkxService, type OKXConfig } from 'genius-intents/okx';
+import { RaydiumV2Service, type RaydiumV2QuoteResponse } from 'genius-intents/raydium';
+
+// This approach ensures only the specific protocol code is included in your bundle
+const across = new AcrossService(acrossConfig);
+const jupiter = new JupiterService({ solanaRpcUrl: 'https://api.mainnet-beta.solana.com' });
+```
+
+#### Option 4: Deep Path Import (Alternative)
+```typescript
+// You can also import from specific protocol paths if needed
+import { JupiterService, type JupiterConfig } from 'genius-intents/protocols/jupiter';
+import { OkxService, type OKXConfig } from 'genius-intents/protocols/okx';
+```
+
+### Bundle Size Optimization
+
+The SDK supports tree-shaking, allowing you to include only the protocols you need:
+
+```typescript
+// ✅ Best: Individual protocol imports (smallest bundle)
+import { AcrossService } from 'genius-intents/across';
+import { JupiterService } from 'genius-intents/jupiter';
+
+// ✅ Good: Namespace imports (medium bundle)
+import { Jupiter } from 'genius-intents';
+
+// ✅ Good: Direct imports from main package (medium bundle)
+import { JupiterService, OkxService, RaydiumV2Service } from 'genius-intents';
+
+// ❌ Avoid: Imports everything (largest bundle)
+import * as GeniusIntents from 'genius-intents';
+```
+
+**Available Individual Protocol Services:**
+- `JupiterService` - Jupiter aggregator on Solana
+- `RaydiumV2Service` - Raydium V2 AMM on Solana  
+- `OkxService` - OKX DEX aggregator
+- `OdosService` - Odos aggregator
+- `KyberswapService` - Kyberswap aggregator
+- `OpenOceanService` - OpenOcean aggregator
+- `AftermathService` - Aftermath aggregator on Sui
+- `ZeroXService` - 0x aggregator
+- `DeBridgeService` - DeBridge cross-chain bridge
+- `GeniusBridgeService` - Genius Bridge cross-chain bridge
+- `AcrossService` - Across Protocol bridge
+
+### Individual Protocol Usage Examples
+
+#### Across Protocol
+```typescript
+import { AcrossService, type AcrossConfig } from 'genius-intents/across';
+
+const acrossConfig: AcrossConfig = {
+  // Across-specific configuration
+};
+
+const across = new AcrossService(acrossConfig);
+const quote = await across.getQuote({
+  // quote parameters
+});
+```
+
+#### Jupiter Protocol
+```typescript
+import { JupiterService, type JupiterConfig } from 'genius-intents/jupiter';
+
+const jupiterConfig: JupiterConfig = {
+  solanaRpcUrl: 'https://api.mainnet-beta.solana.com'
+};
+
+const jupiter = new JupiterService(jupiterConfig);
+const price = await jupiter.getPrice({
+  inputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  outputMint: 'So11111111111111111111111111111111111111112',
+  amount: '1000000',
+  slippageBps: 50
+});
+```
+
+#### OKX Protocol
+```typescript
+import { OkxService, type OKXConfig } from 'genius-intents/okx';
+
+const okxConfig: OKXConfig = {
+  apiKey: 'your-okx-api-key',
+  secretKey: 'your-okx-secret-key',
+  passphrase: 'your-okx-passphrase',
+  projectId: 'your-okx-project-id'
+};
+
+const okx = new OkxService(okxConfig);
+const quote = await okx.getQuote({
+  // quote parameters
+});
 ```
 
 ### Protocol Filtering
