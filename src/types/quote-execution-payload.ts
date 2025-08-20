@@ -3,7 +3,7 @@ import { EvmTransactionData } from './evm-transaction-data';
 
 export type EvmQuoteExecutionPayload = {
   transactionData: EvmTransactionData;
-  approval: Erc20Approval;
+  approval?: Erc20Approval;
 };
 
 export type SvmQuoteExecutionPayload = string[];
