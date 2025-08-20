@@ -439,6 +439,11 @@ export class FourMemeService implements IIntentProtocol {
         receiver: params.receiver || params.from,
         evmExecutionPayload: {
           transactionData,
+          approval: {
+            spender: tokenManagerAddress,
+            token: params.tokenIn,
+            amount: params.amountIn,
+          },
         },
         slippage: params.slippage,
         networkIn: params.networkIn,
