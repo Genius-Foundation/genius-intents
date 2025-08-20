@@ -2,8 +2,8 @@ import { ChainIdEnum } from '../../types/enums';
 import { RawProtocolPriceResponse } from '../../types/price-response';
 
 export type KyberswapConfig = {
-  kyberswapClientId: string;
-  kyberswapPrivateUrl?: string;
+  clientId: string;
+  privateUrl?: string;
 };
 
 export type KyberswapPriceRequestBody = {
