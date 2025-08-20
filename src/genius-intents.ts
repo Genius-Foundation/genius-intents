@@ -38,6 +38,7 @@ import {
 } from './types/quote-execution-payload';
 import { JsonRpcProvider, ethers } from 'ethers';
 import simulateJito from './utils/jito';
+import { FourMemeService } from './protocols/four-meme/four-meme.service';
 
 let logger: ILogger;
 
@@ -70,6 +71,7 @@ const SERVICE_MAP: Record<ProtocolEnum, new (config: any) => IIntentProtocol> = 
   [ProtocolEnum.DEBRIDGE]: DeBridgeService,
   [ProtocolEnum.GENIUS_BRIDGE]: GeniusBridgeService,
   [ProtocolEnum.ACROSS]: AcrossService,
+  [ProtocolEnum.FOUR_MEME]: FourMemeService,
 };
 
 export class GeniusIntents {

@@ -364,6 +364,7 @@ export class OkxService implements IIntentProtocol {
         ? this.okxEvmQuoteResponseToExecutionPayload({
             tokenIn,
             amountIn,
+            networkIn,
             response: okxQuoteResponse as OkxQuoteResponse,
           })
         : await this.okxSolanaQuoteResponseToExecutionPayload({
@@ -488,7 +489,7 @@ export class OkxService implements IIntentProtocol {
   protected okxEvmQuoteResponseToExecutionPayload(
     params: OkxEvmQuoteToExecutionPayloadParams,
   ): EvmQuoteExecutionPayload {
-    const { tokenIn, amountIn, response } = params;
+    const { tokenIn, amountIn, response, networkIn } = params;
 
     if (
       !response ||
@@ -512,6 +513,11 @@ export class OkxService implements IIntentProtocol {
         value: isNative(tokenIn) ? amountIn : response?.data?.[0].tx.value,
         gasEstimate,
         gasLimit,
+      },
+      approval: {
+        spender: this.approvalContracts[networkIn] || '',
+        token: tokenIn,
+        amount: response?.data?.[0].routerResult.fromTokenAmount,
       },
     };
 

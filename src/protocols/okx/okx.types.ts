@@ -198,6 +198,7 @@ export type OkxEvmQuoteToExecutionPayloadParams = {
   tokenIn: string;
   amountIn: string;
   response: OkxQuoteResponse;
+  networkIn: ChainIdEnum;
 };
 
 export type OkxSolanaQuoteToExecutionPayloadParams = {
