@@ -7,26 +7,24 @@ import {
   DeBridgeQuoteResponse,
   DeBridgePriceParams,
   DeBridgeQuoteParams,
+  DebridgeFeeResponse,
+  DebridgeStatusResponse,
+  DebridgeCancelOrderResponse,
 } from './debridge.types';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
-import { IntentPriceParams } from '../../types/price-params';
-import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { IntentQuoteParams } from '../../types/quote-params';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { PriceResponse } from '../../types/price-response';
 import { QuoteResponse } from '../../types/quote-response';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { isEVMNetwork, isSolanaNetwork } from '../../utils/check-vm';
 import { createErrorMessage } from '../../utils/create-error-message';
 import { validateSolanaAddress } from '../../utils/address';
 import { validateAndChecksumEvmAddress } from '../../utils/address-validation';
-import { ZERO_ADDRESS } from '../../utils/constants';
-import {
-  EvmQuoteExecutionPayload,
-  SvmQuoteExecutionPayload,
-} from '../../types/quote-execution-payload';
-import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { isNative } from '../../utils/is-native';
+import { NATIVE_ADDRESS, ZERO_ADDRESS } from '../../utils/constants';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
+import { IntentPriceParams } from '../../types/price-params';
+import { IntentQuoteParams } from '../../types/quote-params';
 
 let logger: ILogger;
 
@@ -42,7 +40,7 @@ export class DeBridgeService implements IIntentProtocol {
   /**
    * RPC URLs for each supported blockchain network.
    */
-  protected readonly solanaRpcUrl: string | undefined = undefined;
+  protected readonly rpcUrls: Record<number, string | string[]> = {};
 
   /**
    * The protocol identifier for DeBridge.
@@ -62,6 +60,7 @@ export class DeBridgeService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
     ChainIdEnum.SOLANA,
+    ChainIdEnum.HYPEREVM,
     // Add other supported chains as needed
   ];
 
@@ -83,12 +82,17 @@ export class DeBridgeService implements IIntentProtocol {
   /**
    * The chain ID used for Solana in the DeBridge protocol.
    */
-  public readonly solanaChainIdEnum: number = 7565164;
+  public readonly solanaChainId: number = 7565164;
 
   /**
    * The chain ID used for Sonic in the DeBridge protocol.
    */
-  public readonly sonicChainIdEnum: number = 100000014;
+  public readonly sonicChainId: number = 100000014;
+
+  /**
+   * The chain ID used for HyperEVM in the DeBridge protocol.
+   */
+  public readonly hyperEvmChainId: number = 100000022;
 
   /**
    * Optional access token for the DeBridge API.
@@ -96,9 +100,17 @@ export class DeBridgeService implements IIntentProtocol {
   public readonly debridgeAccessToken: string | null = null;
 
   /**
+   * Optional authority addresses for source and destination networks.
+   */
+  public readonly authority: {
+    networkInAddress: string;
+    networkOutAddress: string;
+  } | null = null;
+
+  /**
    * Creates a new instance of the DeBridgeService.
    *
-   * @param {GeniusIntentsSDKConfig & DeBridgeConfig} config - Configuration parameters for the service.
+   * @param {SDKConfig & DeBridgeConfig} config - Configuration parameters for the service.
    *
    * @throws {SdkError} If no RPC URLs are provided for the supported blockchains.
    */
@@ -111,19 +123,64 @@ export class DeBridgeService implements IIntentProtocol {
       LoggerFactory.configure(config.logger);
     }
     logger = LoggerFactory.getLogger();
+    if (!config?.rpcUrls) {
+      logger.error('DeBridge Service requires RPC URLs');
+      throw sdkError(SdkErrorEnum.MISSING_RPC_URL, 'DeBridge Service requires RPC URLs');
+    }
+    this.rpcUrls = config.rpcUrls;
 
     // Apply configuration with defaults
-    this.baseUrl =
-      config?.deBridgePrivateUrl || 'https://dln.debridge.finance/v1.0/dln/order/create-tx';
+    this.baseUrl = config?.privateUrl || 'https://dln.debridge.finance/v1.0/dln/order/create-tx';
     this.debridgeAccessToken = config?.debridgeAccessToken || null;
-    this.solanaRpcUrl = config?.solanaRpcUrl || undefined;
+    this.authority = config?.authority || null;
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(config: {
+  /**
+   * Checks if the provided configuration object matches the expected shape.
+   *
+   * This method performs a basic validation to ensure that the input is a non-null object.
+   * It can be extended to include more specific validation logic as needed.
+   *
+   * @typeParam T - The expected shape of the configuration object, defined as an object with string keys and string values.
+   * @param config - The configuration object to validate.
+   * @returns `true` if the configuration is a non-null object; otherwise, `false`.
+   */
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     // Simple validation - can be extended based on specific requirements
     return config && typeof config === 'object';
+  }
+
+  /**
+   * Fetches the fee structure for DeBridge's DLN (Decentralized Liquidity Network) on a specific network.
+   *
+   * @param {ChainIdEnum} network - The blockchain network ID to fetch fees for.
+   *
+   * @returns {Promise<DebridgeDFeeResponse>} A promise that resolves to an object containing:
+   * - The fixed fee amount.
+   * - The transfer fee amount.
+   * - The transfer fee basis points.
+   *
+   * @note This is a simplified implementation. In production, these values would be fetched from the network.
+   */
+  public async fetchDLNFee(network: ChainIdEnum): Promise<DebridgeFeeResponse> {
+    try {
+      // This is a simplified implementation - in a real scenario, you'd fetch these from the network
+      return {
+        fixFee: '0',
+        transferFee: '0',
+        transferFeeBps: '0',
+      };
+    } catch (error) {
+      const thrownError = error as Error;
+      logger.error(`Failed to fetch DLN fees for network ${network}`, thrownError);
+      return {
+        fixFee: '0',
+        transferFee: '0',
+        transferFeeBps: '0',
+      };
+    }
   }
 
   /**
@@ -142,10 +199,7 @@ export class DeBridgeService implements IIntentProtocol {
     try {
       this.validatePriceParams(params);
       const validatedParams = this.transformPriceParams(params);
-      const dlnQuote = await this.fetchDLNQuote({
-        ...validatedParams,
-        ...params.overrideParamsDebridge,
-      });
+      const dlnQuote = await this.fetchDLNQuote(validatedParams);
 
       logger.debug('Successfully received price info from DeBridge', {
         amountOut: dlnQuote.estimation.dstChainTokenOut.amount,
@@ -165,13 +219,10 @@ export class DeBridgeService implements IIntentProtocol {
         priceImpact: undefined, // DeBridge doesn't provide price impact
         protocolResponse: dlnQuote,
       };
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch DeBridge price, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
@@ -193,10 +244,7 @@ export class DeBridgeService implements IIntentProtocol {
     try {
       this.validateQuoteParams(params);
       const validatedParams = this.transformQuoteParams(params);
-      const dlnQuote = await this.fetchDLNQuote({
-        ...validatedParams,
-        ...params.overrideParamsDebridge,
-      });
+      const dlnQuote = await this.fetchDLNQuote(validatedParams);
 
       if (!dlnQuote.tx.data) {
         throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'Invalid DLN quote: Missing transaction data');
@@ -209,13 +257,16 @@ export class DeBridgeService implements IIntentProtocol {
       });
 
       const isSourceSolana = isSolanaNetwork(params.networkIn);
-      const evmExecutionPayload: EvmQuoteExecutionPayload | undefined = isSourceSolana
-        ? undefined
+      const executionPayloadKey = isSourceSolana ? 'svmExecutionPayload' : 'evmExecutionPayload';
+      const executionPayload = isSourceSolana
+        ? { transactionData: [await this.formatSolanaTransaction(dlnQuote.tx.data)] }
         : {
             transactionData: {
               data: dlnQuote.tx.data,
-              to: dlnQuote.tx.to || '',
+              to: dlnQuote.tx.to || '0x',
               value: dlnQuote.tx.value || '0',
+              gasEstimate: '0', // DeBridge doesn't provide gas estimates directly
+              gasLimit: '0', // DeBridge doesn't provide gas limits directly}
             },
             approval: {
               spender: dlnQuote.tx.allowanceTarget || '',
@@ -223,10 +274,6 @@ export class DeBridgeService implements IIntentProtocol {
               token: params.tokenIn,
             },
           };
-
-      const solanaExecutionPayload: SvmQuoteExecutionPayload | undefined = isSourceSolana
-        ? [await this.formatSolanaTransaction(dlnQuote.tx.data)]
-        : undefined;
 
       const response: QuoteResponse = {
         protocol: this.protocol,
@@ -236,22 +283,72 @@ export class DeBridgeService implements IIntentProtocol {
         tokenOut: params.tokenOut,
         amountIn: params.amountIn,
         amountOut: dlnQuote.estimation.dstChainTokenOut.amount,
+        estimatedGas: '0', // DeBridge doesn't provide gas estimates directly
         slippage: params.slippage,
+        priceImpact: undefined, // DeBridge doesn't provide price impact
         from: params.from,
         receiver: params.receiver || params.from,
-        evmExecutionPayload,
-        svmExecutionPayload: solanaExecutionPayload,
+        [executionPayloadKey]: executionPayload,
         protocolResponse: dlnQuote,
       };
 
       return response;
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch DeBridge quote, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
+    }
+  }
+
+  /**
+   * Retrieves the order IDs associated with a transaction hash.
+   *
+   * @param {string} hash - The transaction hash to query.
+   *
+   * @returns {Promise<DebridgeStatusResponse>} A promise that resolves to a response object
+   * containing the order IDs associated with the transaction hash.
+   *
+   * @throws {SdkError} If there's an error fetching the transaction ID.
+   */
+  public async fetchTransactionId(hash: string): Promise<DebridgeStatusResponse> {
+    try {
+      const url = `https://stats-api.dln.trade/api/Transaction/${hash}/orderIds`;
+      const response = await axios.get<DebridgeStatusResponse>(url);
+      return response.data;
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
+    }
+  }
+
+  /**
+   * Fetches the transaction data needed to cancel a cross-chain swap.
+   *
+   * @param {string} hash - The transaction hash of the swap to cancel.
+   *
+   * @returns {Promise<DebridgeCancelOrderResponse>} A promise that resolves to a response object
+   * containing the transaction data needed to cancel the swap.
+   *
+   * @throws {SdkError} If the swap ID cannot be found.
+   * @throws {SdkError} If there's an error fetching the cancel transaction.
+   */
+  public async fetchCancelTransaction(hash: string): Promise<DebridgeCancelOrderResponse> {
+    try {
+      const idResponse = await this.fetchTransactionId(hash);
+      const swapId = idResponse.orderIds[0];
+
+      if (!swapId) {
+        throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, 'Swap ID not found');
+      }
+
+      const url = `https://dln.debridge.finance/v1.0/dln/order/${swapId}/cancel-tx`;
+      const response = await axios.get<DebridgeCancelOrderResponse>(url);
+      return response.data;
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
@@ -270,12 +367,16 @@ export class DeBridgeService implements IIntentProtocol {
      * Add a recent blockhash to the transaction
      * This is necessary for the transaction to be valid on the Solana network.
      */
+    const rpcUrl = this.rpcUrls[ChainIdEnum.SOLANA];
+    const url: string | undefined = Array.isArray(rpcUrl)
+      ? rpcUrl[0]
+      : (rpcUrl as unknown as string);
 
-    if (!this.solanaRpcUrl) {
+    if (!url) {
       throw sdkError(SdkErrorEnum.MISSING_RPC_URL, 'No RPC URL provided for Solana network');
     }
 
-    const connection = new Connection(this.solanaRpcUrl, 'confirmed');
+    const connection = new Connection(url, 'confirmed');
     const recentBlockhash = await connection.getLatestBlockhash('confirmed');
     versionedTx.message.recentBlockhash = recentBlockhash.blockhash;
 
@@ -295,14 +396,22 @@ export class DeBridgeService implements IIntentProtocol {
    * @throws {SdkError} If there's an error with the HTTP request to the DeBridge API.
    * @throws {Error} If the DeBridge API returns an error message.
    */
-  protected async fetchDLNQuote(params: DeBridgePriceParams): Promise<DeBridgeQuoteResponse> {
+  protected async fetchDLNQuote(
+    params: DeBridgePriceParams & {
+      to?: string;
+      authority?: {
+        networkInAddress: string;
+        networkOutAddress: string;
+      };
+    },
+  ): Promise<DeBridgeQuoteResponse> {
     const isSourceSolana = isSolanaNetwork(params.networkIn);
     const isDestSolana = isSolanaNetwork(params.networkOut);
     const isSrcSonic = params.networkIn === ChainIdEnum.SONIC;
     const isDstSonic = params.networkOut === ChainIdEnum.SONIC;
 
-    let srcChainId = isSourceSolana ? this.solanaChainIdEnum : params.networkIn;
-    let dstChainId = isDestSolana ? this.solanaChainIdEnum : params.networkOut;
+    let srcChainId = isSourceSolana ? this.solanaChainId : params.networkIn;
+    let dstChainId = isDestSolana ? this.solanaChainId : params.networkOut;
 
     // Handle Sonic chain IDs if needed
     if (isSrcSonic) {
@@ -313,6 +422,9 @@ export class DeBridgeService implements IIntentProtocol {
       dstChainId = params.networkOut;
     }
 
+    // Use the authority provided in the params or fall back to the service default
+    const authority = params.authority || this.authority;
+
     const request = {
       srcChainId: srcChainId.toString(),
       dstChainId: dstChainId.toString(),
@@ -321,8 +433,8 @@ export class DeBridgeService implements IIntentProtocol {
       srcChainTokenInAmount: params.amountIn,
       dstChainTokenOutAmount: 'auto',
       dstChainTokenOutRecipient: params.to,
-      srcChainOrderAuthorityAddress: params?.authority?.networkInAddress,
-      dstChainOrderAuthorityAddress: params?.authority?.networkOutAddress,
+      srcChainOrderAuthorityAddress: authority?.networkInAddress,
+      dstChainOrderAuthorityAddress: authority?.networkOutAddress,
       /**
        * If the tokenIn is native, then the tx.value will be the amountIn + debridge fee
        * The transfer fee will be taken out of the amountIn
@@ -355,13 +467,10 @@ export class DeBridgeService implements IIntentProtocol {
       }
 
       return response.data;
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch DLN quote`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to fetch DLN quote, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
@@ -402,39 +511,35 @@ export class DeBridgeService implements IIntentProtocol {
     }
 
     // Validate token addresses based on network type
-    if (isSolanaNetwork(networkIn) && !isNative(tokenIn)) {
+    if (isSolanaNetwork(networkIn)) {
       try {
         validateSolanaAddress(tokenIn);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error: unknown) {
-        logger.error(`Invalid Solana token address: ${tokenIn}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenIn}`);
+      } catch (error) {
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
-    } else if (isEVMNetwork(networkIn) && !isNative(tokenIn)) {
+    } else if (isEVMNetwork(networkIn) && tokenIn !== NATIVE_ADDRESS) {
       try {
         validateAndChecksumEvmAddress(tokenIn);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error: unknown) {
-        logger.error(`Invalid EVM token address: ${tokenIn}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenIn}`);
+      } catch (error) {
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     }
 
-    if (isSolanaNetwork(networkOut) && !isNative(tokenOut)) {
+    if (isSolanaNetwork(networkOut)) {
       try {
         validateSolanaAddress(tokenOut);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error: unknown) {
-        logger.error(`Invalid Solana token address: ${tokenOut}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenOut}`);
+      } catch (error) {
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
-    } else if (isEVMNetwork(networkOut) && !isNative(tokenOut)) {
+    } else if (isEVMNetwork(networkOut) && tokenOut !== NATIVE_ADDRESS) {
       try {
         validateAndChecksumEvmAddress(tokenOut);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error: unknown) {
-        logger.error(`Invalid EVM token address: ${tokenOut}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenOut}`);
+      } catch (error) {
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     }
   }
@@ -473,24 +578,33 @@ export class DeBridgeService implements IIntentProtocol {
 
     // Handle chainId transformation for Sonic
     if (networkIn === ChainIdEnum.SONIC) {
-      networkIn = this.sonicChainIdEnum; // or any other default chain for Sonic
+      networkIn = this.sonicChainId; // or any other default chain for Sonic
     }
+
     if (networkOut === ChainIdEnum.SONIC) {
-      networkOut = this.sonicChainIdEnum; // or any other default chain for Sonic
+      networkOut = this.sonicChainId; // or any other default chain for Sonic
+    }
+
+    if (networkIn === ChainIdEnum.HYPEREVM) {
+      networkIn = this.hyperEvmChainId; // Use HyperEVM chain ID
+    }
+
+    if (networkOut === ChainIdEnum.HYPEREVM) {
+      networkOut = this.hyperEvmChainId; // Use HyperEVM chain ID
     }
 
     // Handle token address transformation
     if (isSolanaNetwork(networkIn)) {
-      networkIn = this.solanaChainIdEnum;
-    } else if (isNative(tokenIn)) {
+      networkIn = this.solanaChainId;
+    } else if (tokenIn === NATIVE_ADDRESS) {
       tokenIn = ZERO_ADDRESS;
     } else {
       tokenIn = validateAndChecksumEvmAddress(tokenIn);
     }
 
     if (isSolanaNetwork(networkOut)) {
-      networkOut = this.solanaChainIdEnum;
-    } else if (isNative(tokenOut)) {
+      networkOut = this.solanaChainId;
+    } else if (tokenOut === NATIVE_ADDRESS) {
       tokenOut = ZERO_ADDRESS;
     } else {
       tokenOut = validateAndChecksumEvmAddress(tokenOut);
@@ -523,21 +637,11 @@ export class DeBridgeService implements IIntentProtocol {
       networkOutAddress: params.receiver || params.from,
     };
 
-    let priceResponse: DeBridgeQuoteResponse | undefined = undefined;
-    if (params.priceResponse && this.isDeBridgePriceResponse(params.priceResponse.protocolResponse))
-      priceResponse = params.priceResponse.protocolResponse;
-
     return {
       ...transformedPriceParams,
       to: params.receiver,
       authority,
-      priceResponse,
+      priceResponse: params.priceResponse,
     };
-  }
-
-  protected isDeBridgePriceResponse(
-    response: RawProtocolPriceResponse,
-  ): response is DeBridgeQuoteResponse {
-    return response && 'estimation' in response && 'tx' in response && 'order' in response;
   }
 }

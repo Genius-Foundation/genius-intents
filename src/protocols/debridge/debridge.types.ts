@@ -1,9 +1,14 @@
 import { ChainIdEnum } from '../../types/enums';
 
 export type DeBridgeConfig = {
-  deBridgePrivateUrl?: string;
+  privateUrl?: string;
+  debug?: boolean;
+  rpcUrls?: Record<number, string | string[]>;
   debridgeAccessToken?: string;
-  solanaRpcUrl?: string;
+  authority?: {
+    networkInAddress: string;
+    networkOutAddress: string;
+  };
 };
 
 export type DeBridgePriceParams = {
@@ -15,11 +20,6 @@ export type DeBridgePriceParams = {
   amountIn: string;
   slippage: number;
   from: string;
-  to?: string;
-  authority?: {
-    networkInAddress: string;
-    networkOutAddress: string;
-  };
 };
 
 export type DeBridgeQuoteParams = DeBridgePriceParams & {
@@ -28,7 +28,7 @@ export type DeBridgeQuoteParams = DeBridgePriceParams & {
     networkInAddress: string;
     networkOutAddress: string;
   };
-  priceResponse?: DeBridgeQuoteResponse;
+  priceResponse: unknown;
 };
 
 // Token type for both source and destination chains
@@ -103,4 +103,34 @@ export type DeBridgeQuoteResponse = {
   fixFee: string;
   userPoints: number;
   integratorPoints: number;
+};
+
+export type DebridgeFeeResponse = {
+  /**
+   * The fixed native fee for the bridging operation.
+   */
+  fixFee: string;
+
+  /**
+   * The transfer fee for the bridging operation. (in token base units)
+   */
+  transferFee: string;
+
+  /**
+   * The transfer fee in basis points (bps) for the bridging operation.
+   */
+  transferFeeBps: string;
+};
+
+export type DebridgeStatusResponse = {
+  orderIds: string[];
+};
+
+export type DebridgeCancelOrderResponse = {
+  tx: {
+    data: string;
+    to: string;
+    value: string;
+    chainId: number;
+  };
 };

@@ -25,7 +25,8 @@ export enum ChainIdEnum {
   BLAST = 81457,
   POLYGON = 137,
   ETHEREUM = 1,
-  APTOS = 999,
+  APTOS = 1000,
+  HYPEREVM = 999,
 }
 
 export enum ChainVmTypeEnum {
