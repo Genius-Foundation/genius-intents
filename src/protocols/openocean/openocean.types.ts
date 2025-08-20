@@ -1,8 +1,8 @@
 export type OpenOceanConfig = {
-  openOceanPrivateUrl?: string;
-  openOceanApiVersion?: string;
-  openOceanDisabledDexIds?: string;
-  openOceanEnabledDexIds?: string;
+  privateUrl?: string;
+  apiVersion?: string;
+  disabledDexIds?: string;
+  enabledDexIds?: string;
 };
 
 export type OpenOceanTokenInfo = {
