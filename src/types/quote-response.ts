@@ -11,6 +11,7 @@ import { ZeroXQuoteResponse } from '../protocols/zeroX/zeroX.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
 import { AcrossQuoteResponse } from '../protocols/across/across.types';
 import { GeniusBridgeQuoteResponse } from 'genius-bridge-sdk';
+import { FourMemeQuoteResponse } from '../protocols/four-meme/four-meme.types';
 
 export type QuoteResponse = {
   protocol: ProtocolEnum;
@@ -44,4 +45,5 @@ export type RawProtocolQuoteResponse =
   | AcrossQuoteResponse
   | DeBridgeQuoteResponse
   | OkxQuoteResponse
-  | OkxSolanaQuoteResponse;
+  | OkxSolanaQuoteResponse
+  | FourMemeQuoteResponse;

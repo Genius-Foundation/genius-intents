@@ -10,6 +10,7 @@ export enum ProtocolEnum {
   ZEROX = '0x',
   GENIUS_BRIDGE = 'genius-bridge',
   ACROSS = 'across',
+  FOUR_MEME = 'FourMeme',
 }
 
 export enum ChainIdEnum {
