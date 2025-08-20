@@ -1,23 +1,54 @@
 import axios from 'axios';
+
+import {
+  ZeroXConfig,
+  ZeroXPriceResponse,
+  ZeroXQuoteResponse,
+  ZeroXSwapQuoteResponse,
+} from './zeroX.types';
+import { EvmTransactionData } from '../../types/evm-transaction-data';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse, RawProtocolQuoteResponse } from '../../types/quote-response';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { formatAddress } from '../../utils/address';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
-import { NATIVE_ADDRESS } from '../../utils/constants';
-import { isNative } from '../../utils/is-native';
-import { sdkError } from '../../utils/throw-error';
 import { createErrorMessage } from '../../utils/create-error-message';
-import { ZeroXConfig, ZeroXPriceResponse, ZeroXQuoteResponse } from './zeroX.types';
+import { NATIVE_ADDRESS } from '../../utils/constants';
+import { formatAddress } from '../../utils/address';
+import { sdkError } from '../../utils/throw-error';
+import { isNative } from '../../utils/is-native';
+import { IntentPriceParams } from '../../types/price-params';
+import { IntentQuoteParams } from '../../types/quote-params';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 
 let logger: ILogger;
 
+/**
+ * The `ZeroXService` class implements the IIntentProtocol interface for token swaps
+ * using the 0x Protocol aggregator. It provides functionality for fetching price quotes
+ * and generating transaction data for token swaps on various EVM-compatible blockchains.
+ *
+ * @implements {IIntentProtocol}
+ */
 export class ZeroXService implements IIntentProtocol {
+  /**
+   * RPC URLs for each supported blockchain network.
+   */
+  protected readonly rpcUrls: Record<number, string> = {};
+
+  /**
+   * Flag to determine whether approval transactions should be included.
+   */
+  public includeApprovals: boolean | undefined = false;
+
+  /**
+   * The protocol identifier for 0x Protocol.
+   */
   public readonly protocol = ProtocolEnum.ZEROX;
+
+  /**
+   * The list of blockchain networks supported by the 0x service.
+   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -27,11 +58,34 @@ export class ZeroXService implements IIntentProtocol {
     ChainIdEnum.AVALANCHE,
     ChainIdEnum.BASE,
   ];
+
+  /**
+   * Indicates that the service operates only on a single blockchain.
+   */
   public readonly singleChain = true;
+
+  /**
+   * Indicates that the service does not support cross-chain operations.
+   */
   public readonly multiChain = false;
+
+  /**
+   * The base URL for the 0x API.
+   */
   baseUrl = 'https://api.0x.org/swap/allowance-holder/quote';
+
+  /**
+   * The API key for authenticating requests to the 0x API.
+   */
   public readonly apiKey: string;
 
+  /**
+   * Creates a new instance of the ZeroXService.
+   *
+   * @param {SDKConfig & ZeroXConfig} config - Configuration parameters for the service.
+   *
+   * @throws {SdkError} If no API key is provided for the 0x API.
+   */
   constructor(config?: GeniusIntentsSDKConfig & ZeroXConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -43,30 +97,62 @@ export class ZeroXService implements IIntentProtocol {
 
     logger = LoggerFactory.getLogger();
 
-    if (!config?.zeroXApiKey) {
+    if (config?.rpcUrls) {
+      this.rpcUrls = config.rpcUrls;
+    }
+    if (config?.apiKey) {
+      this.apiKey = config.apiKey;
+    }
+    if (config?.baseUrl) {
+      this.baseUrl = config.baseUrl;
+    }
+    if (!config?.apiKey) {
       logger.error('API key is required for 0x service');
       throw sdkError(SdkErrorEnum.MISSING_INITIALIZATION, 'API key is required for 0x service');
     }
-    this.apiKey = config.zeroXApiKey;
-    this.baseUrl = config.zeroXBaseUrl || 'https://api.0x.org/swap/allowance-holder/quote';
+    this.apiKey = config.apiKey;
+    this.includeApprovals = config?.includeApprovals;
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(config: {
+  /**
+   * Checks if the provided configuration object has a valid `zeroXApiKey` property.
+   *
+   * @typeParam T - The expected shape of the configuration object, extending an object with string values.
+   * @param config - The configuration object to validate.
+   * @returns `true` if `config` contains a non-empty string `zeroXApiKey` property, otherwise `false`.
+   */
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     return typeof config['zeroXApiKey'] === 'string' && config['zeroXApiKey'].length > 0;
   }
 
   /**
-   * Unlike other DEX aggregators like KyberSwap, 0x doesn't have a separate price fetch endpoint.
-   * Instead, we'll use the quote endpoint to get price information as well.
+   * Fetches a price quote for a token swap from the 0x API.
+   * Unlike other DEX aggregators, 0x doesn't have a separate price fetch endpoint.
+   * Instead, the quote endpoint is used to get price information as well.
+   *
+   * @param {PriceParams} params - The parameters required for the price quote.
+   *
+   * @returns {Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: ZeroXPriceResponse }>}
+   * A promise that resolves to a `PriceResponse` object containing:
+   * - The amount of output tokens expected from the swap.
+   * - Gas estimation for the transaction.
+   * - The router address for the swap.
+   *
+   * @throws {SdkError} If the parameters are invalid or unsupported.
+   * @throws {SdkError} If there's an error fetching the price from 0x.
    */
-  public async fetchPrice(
-    params: IntentPriceParams,
-  ): Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: ZeroXPriceResponse }> {
+  public async fetchPrice(params: IntentPriceParams): Promise<
+    Omit<PriceResponse, 'protocolResponse'> & {
+      protocolResponse: ZeroXPriceResponse;
+    }
+  > {
     this.validatePriceParams(params);
     params.tokenIn = isNative(params.tokenIn) ? NATIVE_ADDRESS : params.tokenIn;
-    logger.debug(`Fetching price from ${this.protocol}`, params);
+    params.tokenOut = isNative(params.tokenOut) ? NATIVE_ADDRESS : params.tokenOut;
+
+    logger.debug(`Fetching price from ${this.protocol}`);
 
     // Since 0x doesn't have a separate price endpoint, we'll get a quote and then format it as a price response
     try {
@@ -80,6 +166,14 @@ export class ZeroXService implements IIntentProtocol {
       // Fetch the quote which contains price information
       const quoteResponse = await this.fetchQuote(quoteParams);
 
+      const executionPayload = quoteResponse?.evmExecutionPayload;
+
+      if (!executionPayload) {
+        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, `0x: Quote not found`);
+      }
+
+      const transactionData = executionPayload.transactionData as EvmTransactionData;
+
       // Convert the quote response to a price response format
       const zeroXPriceResponse: ZeroXPriceResponse = {
         routeSummary: {
@@ -90,7 +184,7 @@ export class ZeroXService implements IIntentProtocol {
           gas: quoteResponse.estimatedGas || '0',
           route: [], // 0x doesn't provide route information in the same format as other DEXes
         },
-        routerAddress: quoteResponse.protocolResponse.transaction.to,
+        routerAddress: transactionData.to,
       };
 
       return {
@@ -106,15 +200,28 @@ export class ZeroXService implements IIntentProtocol {
         slippage: params.slippage,
       };
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch swap price from 0x: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Fetches a swap quote from the 0x API and builds the transaction data
+   * needed to execute the swap.
+   *
+   * @param {QuoteParams} params - The parameters required for the swap quote.
+   *
+   * @returns {Promise<QuoteResponse & { protocolResponse: ZeroXQuoteResponse }>}
+   * A promise that resolves to a `QuoteResponse` object containing:
+   * - The expected amount of output tokens.
+   * - The transaction data needed to execute the swap.
+   * - Gas estimates for the transaction.
+   *
+   * @throws {SdkError} If the parameters are invalid or unsupported.
+   * @throws {SdkError} If the API returns an invalid response.
+   * @throws {SdkError} If there's an error fetching the quote.
+   */
   public async fetchQuote(
     params: IntentQuoteParams,
   ): Promise<QuoteResponse & { protocolResponse: ZeroXQuoteResponse }> {
@@ -122,18 +229,12 @@ export class ZeroXService implements IIntentProtocol {
     params.tokenIn = isNative(params.tokenIn) ? NATIVE_ADDRESS : params.tokenIn;
     params.tokenOut = isNative(params.tokenOut) ? NATIVE_ADDRESS : params.tokenOut;
     this.validatePriceParams(params);
-    if (params.receiver && params.receiver !== params.from) {
-      throw sdkError(
-        SdkErrorEnum.INVALID_PARAMS,
-        '0x does not support different receiver addresses for quotes',
-      );
-    }
 
     try {
       const requestUrl = this.buildRequestUrl(params);
       logger.debug(`Making request to 0x API: ${requestUrl}`);
 
-      const response = await axios.get<ZeroXQuoteResponse>(requestUrl, {
+      const response = await axios.get<ZeroXSwapQuoteResponse>(requestUrl, {
         headers: {
           // eslint-disable-next-line @typescript-eslint/naming-convention
           'Content-Type': 'application/json',
@@ -146,28 +247,58 @@ export class ZeroXService implements IIntentProtocol {
 
       const zeroXQuoteResponse = response.data;
 
+      if (zeroXQuoteResponse?.liquidityAvailable === false) {
+        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, `0x: Liquidity not found or available`);
+      }
+
+      if (
+        zeroXQuoteResponse.buyToken.toLowerCase() !== params.tokenOut.toLowerCase() ||
+        zeroXQuoteResponse.sellToken.toLowerCase() !== params.tokenIn.toLowerCase()
+      ) {
+        logger.error('0x pair mismatch', undefined, {
+          requested: { sell: params.tokenIn, buy: params.tokenOut },
+          received: {
+            sell: zeroXQuoteResponse.sellToken,
+            buy: zeroXQuoteResponse.buyToken,
+          },
+        });
+        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'Pair mismatch from 0x response');
+      }
+
+      if (!zeroXQuoteResponse.buyAmount) {
+        logger.error('No output amount received from 0x', undefined, {
+          zeroXQuoteResponse,
+        });
+        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'No output amount received from 0x');
+      }
+
       logger.debug('Successfully received quote info from 0x', {
         buyAmount: zeroXQuoteResponse.buyAmount,
         gasEstimate: zeroXQuoteResponse.transaction.gas,
       });
 
-      if (!zeroXQuoteResponse.buyAmount) {
-        logger.error('No output amount received from 0x', undefined, { zeroXQuoteResponse });
-        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'No output amount received from 0x');
-      }
-
       const gasEstimate = zeroXQuoteResponse.transaction.gas;
       const gasLimit = Math.floor(Number(gasEstimate) * 1.1).toString(); // 10% buffer
 
-      return {
+      // Format the response to match our expected QuoteResponse structure
+      const formattedQuoteResponse: ZeroXQuoteResponse = {
+        amountIn: zeroXQuoteResponse.sellAmount,
+        amountOut: zeroXQuoteResponse.buyAmount,
+        gas: zeroXQuoteResponse.transaction.gas,
+        data: zeroXQuoteResponse.transaction.data,
+        routerAddress: zeroXQuoteResponse.transaction.to,
+        rawResponse: zeroXQuoteResponse,
+      };
+
+      const quoteResponse = {
         protocol: this.protocol,
         tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
         amountIn: params.amountIn,
         amountOut: zeroXQuoteResponse.buyAmount,
         from: params.from,
-        receiver: params.from,
-        evmExecutionPayload: {
+        receiver: params.receiver || params.from,
+        executionPayload: {
           transactionData: {
             data: zeroXQuoteResponse.transaction.data,
             to: zeroXQuoteResponse.transaction.to,
@@ -185,18 +316,24 @@ export class ZeroXService implements IIntentProtocol {
         networkIn: params.networkIn,
         networkOut: params.networkOut,
         estimatedGas: gasEstimate,
-        protocolResponse: zeroXQuoteResponse,
+        protocolResponse: formattedQuoteResponse,
       };
+
+      return quoteResponse;
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch swap quote from 0x: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Builds the request URL for the 0x API with query parameters.
+   *
+   * @param {QuoteParams} params - The parameters to include in the URL.
+   *
+   * @returns {string} The fully formed URL string for the 0x API request.
+   */
   protected buildRequestUrl(params: IntentQuoteParams): string {
     const { tokenIn, tokenOut, amountIn, slippage, from, networkIn } = params;
 
@@ -210,12 +347,19 @@ export class ZeroXService implements IIntentProtocol {
     url.searchParams.append('buyToken', buyToken);
     url.searchParams.append('sellAmount', amountIn);
     url.searchParams.append('taker', formatAddress(from));
-    url.searchParams.append('excludedSources', 'Ox_RFQ'); // Common exclusion
+    url.searchParams.append('excludedSources', '0x_RFQ'); // Common exclusion
     url.searchParams.append('slippageBps', (slippage * 100).toString()); // Convert decimal to basis points
 
     return url.toString();
   }
 
+  /**
+   * Validates the parameters for a price quote request.
+   *
+   * @param {PriceParams} params - The parameters to validate.
+   *
+   * @throws {SdkError} If any of the parameters are invalid or unsupported.
+   */
   protected validatePriceParams(params: IntentPriceParams): void {
     const { networkIn, networkOut } = params;
     logger.debug('Validating price params');
@@ -238,12 +382,26 @@ export class ZeroXService implements IIntentProtocol {
     }
   }
 
+  /**
+   * Type guard to check if a response is a valid 0x price response.
+   *
+   * @param {RawProtocolPriceResponse} response - The response to check.
+   *
+   * @returns {boolean} True if the response is a valid 0x price response.
+   */
   protected isZeroXPriceResponse(
     response: RawProtocolPriceResponse,
   ): response is ZeroXPriceResponse {
     return 'routeSummary' in response && 'routerAddress' in response;
   }
 
+  /**
+   * Type guard to check if a response is a valid 0x quote response.
+   *
+   * @param {RawProtocolQuoteResponse} response - The response to check.
+   *
+   * @returns {boolean} True if the response is a valid 0x quote response.
+   */
   protected isZeroXQuoteResponse(
     response: RawProtocolQuoteResponse,
   ): response is ZeroXQuoteResponse {
