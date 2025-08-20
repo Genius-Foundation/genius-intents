@@ -1,5 +1,7 @@
 export type JupiterConfig = {
-  jupiterPrivateUrl?: string;
+  privateUrl?: string;
+  priceParamOverrides?: Partial<JupiterPriceUrlParams>;
+  quoteParamOverrides?: Partial<JupiterSwapUrlParams>;
 };
 
 export type JupiterSwapPlatformFee = {
@@ -282,32 +284,65 @@ export type JupiterTransactionData = {
   lastValidBlockHeight: number;
   prioritizationFeeLamports: number;
   computeUnitLimit: number;
-  prioritizationType: {
-    computeBudget: {
-      microLamports: number;
-      estimatedMicroLamports: number;
-    };
-  };
+  prioritizationType: JupiterPrioritizationType;
   simulationSlot: number | null;
-  dynamicSlippageReport: {
-    slippageBps: number;
-    otherAmount: null;
-    simulatedIncurredSlippageBps: null;
-    amplificationRatio: null;
-    categoryName: string;
-    heuristicMaxSlippageBps: number;
-    rtseSlippageBps: null;
-    failedTxnEstSlippage: number;
-    emaEstSlippage: number;
-  } | null;
-  simulationError: {
-    errorCode: string;
-    error: string;
-  } | null;
+  dynamicSlippageReport: JupiterDynamicSlippageReport | null;
+  simulationError: JupiterSimulationError | null;
   addressesByLookupTableAddress: null;
   transaction: string;
 };
 
 export type JupiterQuoteResponses = {
   transactions: string[];
+};
+
+export type JupiterPrioritizationType = {
+  computeBudget: {
+    microLamports: number;
+    estimatedMicroLamports: number;
+  };
+};
+
+export type JupiterDynamicSlippageReport = {
+  slippageBps: number;
+  otherAmount: null;
+  simulatedIncurredSlippageBps: null;
+  amplificationRatio: null;
+  categoryName: string;
+  heuristicMaxSlippageBps: number;
+  rtseSlippageBps: null;
+  failedTxnEstSlippage: number;
+  emaEstSlippage: number;
+};
+
+export type JupiterSimulationError = {
+  errorCode: string;
+  error: string;
+};
+
+export type JupiterPriceParamsToRequestParams = {
+  /**
+   * The address of the token to be swapped.
+   */
+  tokenIn: string;
+
+  /**
+   * The address of the token to be swapped for.
+   */
+  tokenOut: string;
+
+  /**
+   * The amount of tokens to be swapped.
+   */
+  amountIn: string;
+
+  /**
+   * The slippage tolerance for the swap (decimal percentage).
+   */
+  slippage: number;
+
+  /**
+   * The chainId of the source network.
+   */
+  from?: string;
 };
