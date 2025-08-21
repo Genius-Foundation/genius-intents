@@ -1,8 +1,8 @@
 import { ChainIdEnum } from '../../types/enums';
 
 export type ZeroXConfig = {
-  apiKey: string;
-  baseUrl?: string;
+  zeroXApiKey: string;
+  zeroXBaseUrl?: string;
 };
 
 // Price Request Types

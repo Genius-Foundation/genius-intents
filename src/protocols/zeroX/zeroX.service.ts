@@ -32,16 +32,6 @@ let logger: ILogger;
  */
 export class ZeroXService implements IIntentProtocol {
   /**
-   * RPC URLs for each supported blockchain network.
-   */
-  protected readonly rpcUrls: Record<number, string> = {};
-
-  /**
-   * Flag to determine whether approval transactions should be included.
-   */
-  public includeApprovals: boolean | undefined = false;
-
-  /**
    * The protocol identifier for 0x Protocol.
    */
   public readonly protocol = ProtocolEnum.ZEROX;
@@ -97,21 +87,12 @@ export class ZeroXService implements IIntentProtocol {
 
     logger = LoggerFactory.getLogger();
 
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
-    if (config?.apiKey) {
-      this.apiKey = config.apiKey;
-    }
-    if (config?.baseUrl) {
-      this.baseUrl = config.baseUrl;
-    }
-    if (!config?.apiKey) {
+    if (!config?.zeroXApiKey) {
       logger.error('API key is required for 0x service');
       throw sdkError(SdkErrorEnum.MISSING_INITIALIZATION, 'API key is required for 0x service');
     }
-    this.apiKey = config.apiKey;
-    this.includeApprovals = config?.includeApprovals;
+    this.apiKey = config.zeroXApiKey;
+    this.baseUrl = config.zeroXBaseUrl || 'https://api.0x.org/swap/allowance-holder/quote';
   }
 
   /**
