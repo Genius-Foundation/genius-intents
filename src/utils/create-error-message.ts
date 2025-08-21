@@ -9,7 +9,7 @@ type ErrorPayload = {
 // ---- per-aggregator parsers ----
 function extractOdosError(data: unknown): string | undefined {
   // Odos typically returns: { detail: string, traceId?: string, errorCode?: number }
-  if (!data) return;
+  if (!data) return undefined;
   if (typeof data === 'string') return data;
 
   try {
@@ -20,6 +20,8 @@ function extractOdosError(data: unknown): string | undefined {
   } catch {
     /* ignore JSON parse errors */
   }
+
+  return undefined;
 }
 
 // Add more extractors as you integrate other aggregators

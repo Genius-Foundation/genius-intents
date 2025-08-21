@@ -137,11 +137,10 @@ export class AcrossService implements IIntentProtocol {
         protocolResponse: quote,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
+      const formattedError = createErrorMessage(error, this.protocol);
       throw sdkError(
         SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch Across price, error: ${errorMessage}`,
+        `Failed to fetch Across price, error: ${formattedError}`,
       );
     }
   }
@@ -235,11 +234,10 @@ export class AcrossService implements IIntentProtocol {
         protocolResponse: quote,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      const formattedError = createErrorMessage(error, this.protocol);
       throw sdkError(
         SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch Across quote, error: ${errorMessage}`,
+        `Failed to fetch Across quote, error: ${formattedError}`,
       );
     }
   }

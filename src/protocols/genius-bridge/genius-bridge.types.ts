@@ -6,6 +6,15 @@ export type GeniusBridgeConfig = {
   rpcUrls?: Record<number, string | string[]>;
 };
 
+export type GeniusBridgeFeesBreakdown = {
+  base: string;
+  bps: string;
+  insurance: string;
+  swapOut?: string;
+  call?: string;
+  total: string;
+};
+
 export type PermitDetails = {
   token: string;
   amount: string;
