@@ -90,13 +90,6 @@ export class FourMemeService implements IIntentProtocol {
     'function buyTokenAMAP(address token, uint256 funds, uint256 minAmount) external payable',
   ];
 
-  /**
-   * Creates a new instance of the FourMemeService.
-   *
-   * @param {SDKConfig & FourMemeConfig} config - Configuration parameters for the service.
-   *
-   * @throws {SdkError} If no RPC URL is provided for BSC.
-   */
   constructor(config: GeniusIntentsSDKConfig & FourMemeConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -116,20 +109,14 @@ export class FourMemeService implements IIntentProtocol {
     );
   }
 
-  /**
-   * Fetches a price quote for a token swap from the four.meme contracts.
-   *
-   * @param {PriceParams} params - The parameters required for the price quote.
-   *
-   * @returns {Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: FourMemePriceResponse }>}
-   * A promise that resolves to a `PriceResponse` object containing:
-   * - The amount of output tokens expected from the swap.
-   * - Gas estimation for the transaction.
-   * - The router address for the swap.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If there's an error fetching the price from four.meme.
-   */
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
+    [key: string]: string;
+  }): config is T {
+    return (
+      config && Object.keys(config).length > 0 && Object.values(config).every(value => value !== '')
+    );
+  }
+
   public async fetchPrice(params: IntentPriceParams): Promise<PriceResponse> {
     this.validatePriceParams(params);
     logger.debug(`Fetching price from ${this.protocol}`);
@@ -213,22 +200,6 @@ export class FourMemeService implements IIntentProtocol {
     }
   }
 
-  /**
-   * Fetches a swap quote from the four.meme contracts and builds the transaction data
-   * needed to execute the swap.
-   *
-   * @param {QuoteParams} params - The parameters required for the swap quote.
-   *
-   * @returns {Promise<QuoteResponse & { protocolResponse: FourMemeQuoteResponse }>}
-   * A promise that resolves to a `QuoteResponse` object containing:
-   * - The expected amount of output tokens.
-   * - The transaction data needed to execute the swap.
-   * - Gas estimates for the transaction.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If the API returns an invalid response.
-   * @throws {SdkError} If there's an error fetching the quote.
-   */
   public async fetchQuote(
     params: IntentQuoteParams,
   ): Promise<QuoteResponse & { protocolResponse: FourMemeQuoteResponse }> {
@@ -478,6 +449,17 @@ export class FourMemeService implements IIntentProtocol {
     return ((amountBN * multiplier) / base).toString();
   }
 
+  /**
+   * Formats the given amount string to ensure it is divisible by 1 GWEI (10^9 wei).
+   *
+   * This method is used to avoid "GWEI" errors from the four meme contracts by aligning
+   * the amount to the nearest lower value that is divisible by GWEI. If the input amount
+   * is already divisible by GWEI, it is returned as-is. If the aligned amount would be zero,
+   * the method returns the minimum value of 1 GWEI.
+   *
+   * @param amount - The amount to format, represented as a string.
+   * @returns The formatted amount as a string, guaranteed to be divisible by 1 GWEI and never zero.
+   */
   private _formatAmount(amount: string): string {
     /**
      * to avoid "GWEI" errors from the four meme contracts
@@ -541,13 +523,5 @@ export class FourMemeService implements IIntentProtocol {
         'Either input or output must be native BNB for four.meme swaps',
       );
     }
-  }
-
-  public isCorrectConfig<T extends { [key: string]: string }>(config: {
-    [key: string]: string;
-  }): config is T {
-    return (
-      config && Object.keys(config).length > 0 && Object.values(config).every(value => value !== '')
-    );
   }
 }

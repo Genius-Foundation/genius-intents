@@ -11,6 +11,10 @@ import {
   DebridgeFeeResponse,
   DebridgeStatusResponse,
 } from './debridge.types';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from '../../types/quote-execution-payload';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
@@ -24,10 +28,6 @@ import { createErrorMessage } from '../../utils/create-error-message';
 import { validateSolanaAddress } from '../../utils/address';
 import { validateAndChecksumEvmAddress } from '../../utils/address-validation';
 import { ZERO_ADDRESS } from '../../utils/constants';
-import {
-  EvmQuoteExecutionPayload,
-  SvmQuoteExecutionPayload,
-} from '../../types/quote-execution-payload';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { isNative } from '../../utils/is-native';
 
@@ -65,7 +65,6 @@ export class DeBridgeService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
     ChainIdEnum.SOLANA,
-    // Add other supported chains as needed
   ];
 
   /**
