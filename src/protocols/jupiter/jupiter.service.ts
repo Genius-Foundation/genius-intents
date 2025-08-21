@@ -1,5 +1,14 @@
 import axios from 'axios';
 import bs58 from 'bs58';
+import { AxiosError } from 'axios';
+import { VersionedTransaction } from '@solana/web3.js';
+
+import {
+  JupiterConfig,
+  JupiterPriceResponse,
+  JupiterPriceUrlParams,
+  JupiterTransactionData,
+} from './jupiter.types';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { IntentPriceParams } from '../../types/price-params';
@@ -10,29 +19,66 @@ import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { WRAPPED_SOL } from '../../utils/constants';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
-import { AxiosError } from 'axios';
-import {
-  JupiterConfig,
-  JupiterPriceResponse,
-  JupiterPriceUrlParams,
-  JupiterTransactionData,
-} from './jupiter.types';
-import { VersionedTransaction } from '@solana/web3.js';
 import { createErrorMessage } from '../../utils/create-error-message';
 import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
 
+/**
+ * Service class for interacting with the Jupiter protocol on the Solana blockchain.
+ * Implements the IIntentProtocol interface to provide price and quote fetching functionalities.
+ *
+ * @remarks
+ * - Only supports Solana network for both input and output.
+ * - Uses configurable endpoints for price, quote, and swap assembly.
+ * - Allows custom logger and debug configuration.
+ *
+ * @example
+ * ```typescript
+ * const service = new JupiterService({ debug: true });
+ * const price = await service.fetchPrice({ ... });
+ * const quote = await service.fetchQuote({ ... });
+ * ```
+ */
 export class JupiterService implements IIntentProtocol {
+  /**
+   * The protocol identifier for Jupiter.
+   */
   public readonly protocol = ProtocolEnum.JUPITER;
+
+  /**
+   * The supported blockchain networks for this protocol.
+   */
   public readonly chains = [ChainIdEnum.SOLANA];
+
+  /**
+   * Indicates whether the protocol supports single-chain swaps.
+   */
   public readonly singleChain = true;
+
+  /**
+   * Indicates whether the protocol supports multi-chain swaps.
+   */
   public readonly multiChain = false;
 
+  /**
+   * The endpoint for fetching price quotes.
+   */
   public readonly priceEndpoint: string = '/quote';
+
+  /**
+   * The endpoint for fetching swap instructions.
+   */
   public readonly quoteEndpoint: string = '/swap-instructions';
+
+  /**
+   * The endpoint for fetching swap assembly instructions.
+   */
   public readonly assemblyEndpoint: string = '/swap';
 
+  /**
+   * The base URL for the Jupiter API.
+   */
   public baseUrl: string;
 
   constructor(config?: GeniusIntentsSDKConfig & JupiterConfig) {
@@ -49,7 +95,7 @@ export class JupiterService implements IIntentProtocol {
     this.baseUrl = config?.jupiterPrivateUrl || 'https://quote-api.jup.ag/v6';
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // Jupiter has no required config fields, all are optional
