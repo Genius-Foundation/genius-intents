@@ -17,7 +17,8 @@ import {
   EvmQuoteExecutionPayload,
   SvmQuoteExecutionPayload,
 } from '../../types/quote-execution-payload';
-import { NATIVE_SOL, WRAPPED_SOL } from '../../utils/constants';
+import { NATIVE_ADDRESS, WRAPPED_SOL } from '../../utils/constants';
+import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
 export class OpenOceanService implements IIntentProtocol {
@@ -32,6 +33,7 @@ export class OpenOceanService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SOLANA,
     ChainIdEnum.SONIC,
+    ChainIdEnum.HYPEREVM,
     // ChainIdEnum.APTOS,
     // ChainIdEnum.SUI,
     // Add other supported chains
@@ -70,14 +72,15 @@ export class OpenOceanService implements IIntentProtocol {
   }
 
   public async fetchPrice(params: IntentPriceParams): Promise<PriceResponse> {
-    this.validatePriceParams(params);
-    const queryNetwork = isSolanaNetwork(params.networkIn) ? 'solana' : params.networkIn;
+    const { tokenIn, tokenOut, amountIn, networkIn, networkOut, slippage } =
+      this.validatePriceParams(params);
+    const queryNetwork = isSolanaNetwork(networkIn) ? 'solana' : networkIn;
     try {
       const url = `${this.baseUrl}/${this.apiVersion}/${queryNetwork}/quote`;
       const queryParams = {
-        inTokenAddress: params.tokenIn === NATIVE_SOL ? WRAPPED_SOL : params.tokenIn,
-        outTokenAddress: params.tokenOut === NATIVE_SOL ? WRAPPED_SOL : params.tokenOut,
-        amountDecimals: params.amountIn,
+        inTokenAddress: tokenIn,
+        outTokenAddress: tokenOut,
+        amountDecimals: amountIn,
         disabledDexIds: this.disabledDexIds,
         enabledDexIds: this.enabledDexIds,
         gasPrice: 1,
@@ -111,38 +114,34 @@ export class OpenOceanService implements IIntentProtocol {
 
       return {
         protocol: this.protocol,
-        networkIn: params.networkIn,
-        networkOut: params.networkOut,
+        networkIn: networkIn,
+        networkOut: networkOut,
         tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
-        amountIn: params.amountIn,
+        amountIn: amountIn,
         amountOut: priceData.outAmount,
         estimatedGas: priceData.estimatedGas,
-        slippage: params.slippage,
+        slippage: slippage,
         priceImpact: priceData.price_impact ? parseFloat(priceData.price_impact) : undefined,
         protocolResponse: priceData,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch OpenOcean price, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
-    this.validatePriceParams(params);
-    const { from, receiver, tokenIn, amountIn, networkIn, networkOut, slippage, tokenOut } = params;
+    const { tokenIn, tokenOut, amountIn, slippage, from, receiver, networkIn, networkOut } =
+      this.validateQuoteParams(params);
 
     const queryNetwork = isSolanaNetwork(networkIn) ? 'solana' : networkIn;
     try {
       const url = `${this.baseUrl}/${this.apiVersion}/${queryNetwork}/swap`;
 
       const queryParams = {
-        inTokenAddress: tokenIn === NATIVE_SOL ? WRAPPED_SOL : tokenIn,
-        outTokenAddress: tokenOut === NATIVE_SOL ? WRAPPED_SOL : tokenOut,
+        inTokenAddress: tokenIn,
+        outTokenAddress: tokenOut,
         amountDecimals: amountIn,
         gasPrice: 1, // Default gas price, could be made configurable
         slippage: slippage.toString(),
@@ -224,30 +223,26 @@ export class OpenOceanService implements IIntentProtocol {
 
       return {
         protocol: this.protocol,
-        tokenIn: tokenIn,
+        tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
         amountIn: amountIn,
         amountOut: quoteData.outAmount,
-        from,
+        from: from,
         receiver: receiver || from,
         evmExecutionPayload: isSolanaNetwork(networkIn) ? undefined : evmExecutionPayload,
         svmExecutionPayload: isSolanaNetwork(networkIn) ? solanaExecutionPayload : undefined,
-        slippage,
-        networkIn,
-        networkOut,
+        slippage: slippage,
+        networkIn: networkIn,
+        networkOut: networkOut,
         protocolResponse: quoteData,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch OpenOcean quote, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 
-  protected validatePriceParams(params: IntentPriceParams): void {
+  protected validatePriceParams(params: IntentPriceParams): IntentPriceParams {
     const { networkIn, networkOut } = params;
 
     if (!this.multiChain && networkIn !== networkOut) {
@@ -262,6 +257,30 @@ export class OpenOceanService implements IIntentProtocol {
       logger.error(`Network ${networkOut} not supported`);
       throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Network ${networkOut} not supported`);
     }
+
+    let tokenIn = params.tokenIn;
+    let tokenOut = params.tokenOut;
+
+    if (isNative(tokenIn)) {
+      if (networkIn === ChainIdEnum.SOLANA) {
+        tokenIn = WRAPPED_SOL;
+      } else {
+        tokenIn = NATIVE_ADDRESS;
+      }
+    }
+
+    if (isNative(tokenOut)) {
+      if (networkOut === ChainIdEnum.SOLANA) {
+        tokenOut = WRAPPED_SOL;
+      } else {
+        tokenOut = NATIVE_ADDRESS;
+      }
+    }
+    return { ...params, tokenIn, tokenOut };
+  }
+
+  protected validateQuoteParams(params: IntentQuoteParams): IntentQuoteParams {
+    return { ...params, ...this.validatePriceParams(params) };
   }
 
   protected isOpenOceanPriceResponse(
