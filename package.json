@@ -3,7 +3,7 @@
   "version": "0.11.0",
   "description": "A unified SDK for interacting with intents-based protocols across multiple blockchains including Solana, Ethereum, and Sui",
   "license": "GNU",
-  "author": "Samuel Videau <samuel@videau.io>",
+  "author": "Samuel Videau <samuel@videau.io>, AltLoot <@altloot>",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "commonjs",
