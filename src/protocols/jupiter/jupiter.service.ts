@@ -7,7 +7,7 @@ import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-respo
 import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
 import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { NATIVE_SOL, WRAPPED_SOL } from '../../utils/constants';
+import { WRAPPED_SOL } from '../../utils/constants';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { AxiosError } from 'axios';
@@ -19,6 +19,7 @@ import {
 } from './jupiter.types';
 import { VersionedTransaction } from '@solana/web3.js';
 import { createErrorMessage } from '../../utils/create-error-message';
+import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
 
@@ -73,6 +74,9 @@ export class JupiterService implements IIntentProtocol {
         ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
+      // If dynamic slippage is enabled from the override params, remove the slippageBps parameter
+      if (requestParams.dynamicSlippage) delete requestParams.slippageBps;
+
       const stringParams: Record<string, string> = Object.fromEntries(
         Object.entries(requestParams).map(([k, v]) => [k, String(v)]),
       );
@@ -95,32 +99,28 @@ export class JupiterService implements IIntentProtocol {
       }
 
       const priceResponse: PriceResponse = {
+        ...params,
         protocol: ProtocolEnum.JUPITER,
-        networkIn: params.networkIn,
-        networkOut: params.networkOut,
-        tokenIn: params.tokenIn,
-        tokenOut: params.tokenOut,
-        amountIn: params.amountIn,
         amountOut: priceData.outAmount,
-        slippage: params.slippage,
         priceImpact: parseFloat(priceData.priceImpactPct) * 100,
         protocolResponse: priceData,
       };
 
       return priceResponse;
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      logger.error(`Failed to fetch Jupiter price`, errorMessageError);
+      const formattedError = createErrorMessage(error, this.protocol);
+      logger.error(
+        `Failed to fetch swap price from ${this.protocol}, error: ${formattedError.message}`,
+      );
       throw sdkError(
         SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch Jupiter price, error: ${errorMessage}`,
+        `Failed to fetch Jupiter price, error: ${formattedError.message}`,
       );
     }
   }
 
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
-    const { from, receiver } = params;
+    const { from } = params;
     let { priceResponse } = params;
 
     if (!priceResponse || !this.isJupiterPriceResponse(priceResponse.protocolResponse)) {
@@ -144,6 +144,9 @@ export class JupiterService implements IIntentProtocol {
         ...(params.overrideParamsJupiter ? params.overrideParamsJupiter : {}),
       };
 
+      // If dynamic slippage is enabled from the override params, remove the slippageBps parameter
+      if (swapParams.dynamicSlippage) delete swapParams.slippageBps;
+
       // Log the full quote (swap) URL and body
       const quoteUrl = `${this.baseUrl}${this.assemblyEndpoint}`;
       logger.debug(`Jupiter Quote URL: ${quoteUrl}`);
@@ -165,15 +168,8 @@ export class JupiterService implements IIntentProtocol {
 
       const quoteResponse: QuoteResponse = {
         protocol: ProtocolEnum.JUPITER,
-        networkIn: params.networkIn,
-        networkOut: params.networkOut,
-        tokenIn: priceResponse.tokenIn,
-        tokenOut: priceResponse.tokenOut,
-        amountIn: priceResponse.amountIn,
+        ...params,
         amountOut: priceResponse.amountOut,
-        from,
-        receiver: receiver || from,
-        slippage: priceResponse.slippage,
         priceImpact: priceResponse.priceImpact,
         svmExecutionPayload: [swapTransactionResponse.data.swapTransaction],
         protocolResponse: { transactions: [] },
@@ -205,8 +201,8 @@ export class JupiterService implements IIntentProtocol {
   }): JupiterPriceUrlParams {
     const { tokenIn, tokenOut, amountIn, slippage } = params;
     const requestParams: JupiterPriceUrlParams = {
-      inputMint: tokenIn === NATIVE_SOL ? WRAPPED_SOL : tokenIn,
-      outputMint: tokenOut === NATIVE_SOL ? WRAPPED_SOL : tokenOut,
+      inputMint: isNative(tokenIn) ? WRAPPED_SOL : tokenIn,
+      outputMint: isNative(tokenOut) ? WRAPPED_SOL : tokenOut,
       amount: parseInt(amountIn),
       slippageBps: Math.round(slippage * 100),
     };
