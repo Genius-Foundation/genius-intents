@@ -1,3 +1,10 @@
+import axios from 'axios';
+import bs58 from 'bs58';
+
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from '../../types/quote-execution-payload';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { IntentPriceParams } from '../../types/price-params';
@@ -10,19 +17,20 @@ import { sdkError } from '../../utils/throw-error';
 import { isSolanaNetwork } from '../../utils/check-vm';
 import { OpenOceanConfig, OpenOceanPriceResponse, OpenOceanQuoteResponse } from './openocean.types';
 import { createErrorMessage } from '../../utils/create-error-message';
-import axios from 'axios';
-import bs58 from 'bs58';
 import { PublicKey, Transaction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
-import {
-  EvmQuoteExecutionPayload,
-  SvmQuoteExecutionPayload,
-} from '../../types/quote-execution-payload';
 import { NATIVE_ADDRESS, WRAPPED_SOL } from '../../utils/constants';
 import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
 export class OpenOceanService implements IIntentProtocol {
+  /**
+   * The supported protocol enum
+   */
   public readonly protocol = ProtocolEnum.OPEN_OCEAN;
+
+  /**
+   * The supported chains for the OpenOcean protocol
+   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -38,13 +46,35 @@ export class OpenOceanService implements IIntentProtocol {
     // ChainIdEnum.SUI,
     // Add other supported chains
   ];
+
+  /**
+   * Whether the protocol supports single-chain swaps
+   */
   public readonly singleChain = true;
+
+  /**
+   * Whether the protocol supports multi-chain swaps
+   */
   public readonly multiChain = false;
 
+  /**
+   * The base URL for the OpenOcean API
+   */
   public readonly baseUrl: string;
 
+  /**
+   * The API version for the OpenOcean API
+   */
   protected readonly apiVersion: string;
+
+  /**
+   * The disabled DEX IDs for the OpenOcean API
+   */
   protected readonly disabledDexIds?: string;
+
+  /**
+   * The enabled DEX IDs for the OpenOcean API
+   */
   protected readonly enabledDexIds?: string;
 
   constructor(config?: GeniusIntentsSDKConfig & OpenOceanConfig) {
@@ -64,7 +94,7 @@ export class OpenOceanService implements IIntentProtocol {
     this.enabledDexIds = config?.openOceanEnabledDexIds;
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // OpenOcean has no required config fields, all are optional
