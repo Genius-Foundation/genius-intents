@@ -62,7 +62,7 @@ export class ZeroXService implements IIntentProtocol {
   /**
    * The base URL for the 0x API.
    */
-  baseUrl = 'https://api.0x.org/swap/allowance-holder/quote';
+  public baseUrl = 'https://api.0x.org/swap/allowance-holder/quote';
 
   /**
    * The API key for authenticating requests to the 0x API.
