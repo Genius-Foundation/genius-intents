@@ -109,12 +109,10 @@ export class OdosService implements IIntentProtocol {
         slippage: params.slippage,
       };
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch swap price from ODOS: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError, {
+        cause: error,
+      });
     }
   }
 
@@ -192,12 +190,10 @@ export class OdosService implements IIntentProtocol {
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch swap quote from ODOS: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError, {
+        cause: error,
+      });
     }
   }
 
