@@ -18,8 +18,12 @@ export type ApprovalContracts = {
 };
 
 export type OKXConfig = {
-  privateUrl?: string;
-  okxCredentials: OKXCredentials;
+  okxPrivateUrl?: string;
+  okxApiKey: string;
+  okxSecretKey: string;
+  okxPassphrase: string;
+  okxProjectId: string;
+  solanaRpcUrl?: string;
 };
 
 export type OkxQueryParams = {

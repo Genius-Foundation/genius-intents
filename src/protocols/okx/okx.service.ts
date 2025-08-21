@@ -52,16 +52,6 @@ let logger: ILogger;
  */
 export class OkxService implements IIntentProtocol {
   /**
-   * RPC URLs for each supported blockchain network.
-   */
-  protected readonly rpcUrls: Record<number, string> = {};
-
-  /**
-   * Flag to determine whether approval transactions should be included.
-   */
-  public includeApprovals: boolean | undefined = false;
-
-  /**
    * Credentials required for authenticating with the OKX API.
    */
   public readonly okxCredentials: OKXCredentials = {
@@ -121,11 +111,6 @@ export class OkxService implements IIntentProtocol {
   public readonly solanaQuoteEndpoint: string = '/api/v5/dex/aggregator/swap-instruction';
 
   /**
-   * The endpoint for token approval transaction requests.
-   */
-  public readonly approvalEndpoint: string = '/api/v5/dex/aggregator/approve-transaction';
-
-  /**
    * The chain ID used by OKX for solana
    */
   public readonly solanaChainId: string = '501';
@@ -151,6 +136,7 @@ export class OkxService implements IIntentProtocol {
     [ChainIdEnum.BSC]: '0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6',
     [ChainIdEnum.AVALANCHE]: '0x40aA958dd87FC8305b97f2BA922CDdCa374bcD7f',
     [ChainIdEnum.BASE]: '0x57df6092665eb6058DE53939612413ff4B09114E',
+    [ChainIdEnum.SONIC]: '0xd321ab5589d3e8fa5df985ccfef625022e2dd910',
   };
 
   /**
@@ -160,12 +146,9 @@ export class OkxService implements IIntentProtocol {
    *
    * @throws {SdkError} If OKX credentials are missing or incomplete.
    */
-  constructor(config?: GeniusIntentsSDKConfig & OKXConfig) {
-    if (!config?.okxCredentials) {
-      throw sdkError(SdkErrorEnum.MISSING_INITIALIZATION, 'Missing OKX Client Id & Credentials');
-    }
-    const { secretKey, apiKey, passphrase, projectId } = config?.okxCredentials;
-    if (!secretKey || !apiKey || !passphrase || !projectId) {
+  constructor(config: GeniusIntentsSDKConfig & OKXConfig) {
+    const { okxApiKey, okxSecretKey, okxPassphrase, okxProjectId } = config;
+    if (!okxSecretKey || !okxApiKey || !okxPassphrase || !okxProjectId) {
       throw sdkError(
         SdkErrorEnum.MISSING_INITIALIZATION,
         'Missing OKX Secret Key || Apikey || Passphrase || ProjectId',
@@ -179,21 +162,19 @@ export class OkxService implements IIntentProtocol {
       LoggerFactory.configure(config.logger);
     }
     logger = LoggerFactory.getLogger();
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
+    this.baseUrl = config?.okxPrivateUrl || 'https://www.okx.com';
 
-    if (config?.rpcUrls && config?.rpcUrls[ChainIdEnum.SOLANA]) {
-      this.solanaRpcUrl = config.rpcUrls[ChainIdEnum.SOLANA];
-    }
+    this.okxCredentials = {
+      apiKey: okxApiKey,
+      secretKey: okxSecretKey,
+      passphrase: okxPassphrase,
+      projectId: okxProjectId,
+    };
 
+    this.solanaRpcUrl = config?.solanaRpcUrl;
     if (this.solanaRpcUrl) {
       this.solanaClient = new Connection(this.solanaRpcUrl);
     }
-
-    this.includeApprovals = config.includeApprovals;
-    this.baseUrl = config?.privateUrl || 'https://www.okx.com';
-    this.okxCredentials = config.okxCredentials;
   }
 
   /**
@@ -226,20 +207,14 @@ export class OkxService implements IIntentProtocol {
       const url = `${this.baseUrl}${this.priceEndpoint}?${priceUrlParams.toString()}`;
       logger.debug(`Making request to OKX API: ${url}`);
 
-      const response = await axios.get<OkxPriceResponse>(url, {
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-KEY': this.okxCredentials.apiKey,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-SIGN': signature,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-TIMESTAMP': timestamp,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-PASSPHRASE': this.okxCredentials.passphrase,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-PROJECT': this.okxCredentials.projectId,
-        },
-      });
+      const headers: Record<string, string> = {};
+      headers['OK-ACCESS-KEY'] = this.okxCredentials.apiKey || '';
+      headers['OK-ACCESS-SIGN'] = signature;
+      headers['OK-ACCESS-TIMESTAMP'] = timestamp;
+      headers['OK-ACCESS-PASSPHRASE'] = this.okxCredentials.passphrase || '';
+      headers['OK-ACCESS-PROJECT'] = this.okxCredentials.projectId || '';
+
+      const response = await axios.get<OkxPriceResponse>(url, { headers });
 
       const okxPriceResponse = response.data;
 
@@ -329,20 +304,14 @@ export class OkxService implements IIntentProtocol {
       const url = `${this.baseUrl}${quoteEndpoint}?${quoteUrlParams.toString()}`;
       logger.debug(`Making request to OKX quote API: ${url}`);
 
-      const response = await axios.get<OkxQuoteResponse | OkxSolanaQuoteResponse>(url, {
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-KEY': this.okxCredentials.apiKey,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-SIGN': signature,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-TIMESTAMP': timestamp,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-PASSPHRASE': this.okxCredentials.passphrase,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'OK-ACCESS-PROJECT': this.okxCredentials.projectId,
-        },
-      });
+      const headers: Record<string, string> = {};
+      headers['OK-ACCESS-KEY'] = this.okxCredentials.apiKey || '';
+      headers['OK-ACCESS-SIGN'] = signature;
+      headers['OK-ACCESS-TIMESTAMP'] = timestamp;
+      headers['OK-ACCESS-PASSPHRASE'] = this.okxCredentials.passphrase || '';
+      headers['OK-ACCESS-PROJECT'] = this.okxCredentials.projectId || '';
+
+      const response = await axios.get<OkxQuoteResponse | OkxSolanaQuoteResponse>(url, { headers });
 
       const isEvm = isEVMNetwork(networkIn);
       const okxQuoteResponse = response.data;
@@ -889,15 +858,14 @@ export class OkxService implements IIntentProtocol {
     return 'data' in response && Array.isArray(response.data) && response.data.length > 0;
   }
 
-  public isCorrectConfig<T extends { [key: string]: string }>(config: {
+  isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     return (
-      config &&
-      typeof config['apiKey'] === 'string' &&
-      typeof config['secretKey'] === 'string' &&
-      Array.isArray(config['chains']) &&
-      (config['chains'] as unknown[]).every(chain => typeof chain === 'string')
+      !!config['okxApiKey'] &&
+      !!config['okxSecretKey'] &&
+      !!config['okxPassphrase'] &&
+      !!config['okxProjectId']
     );
   }
 }
