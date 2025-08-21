@@ -1,102 +1,50 @@
-import {
-  Authority,
-  GeniusBridgePriceRequestParams,
-  GeniusBrdidgeQuoteRequestParams,
-} from './genius-bridge.types';
-import {
-  validateAndChecksumEvmAddress,
-  validateSolanaAddress,
-} from '../../utils/address-validation';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { Erc20Approval } from '../../types/erc20-approval';
+import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse } from '../../types/price-response';
+import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { isNative } from '../../utils/is-native';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { isEVMNetwork, isSolanaNetwork } from '../../utils/check-vm';
 import { createErrorMessage } from '../../utils/create-error-message';
+import {
+  validateAndChecksumEvmAddress,
+  validateSolanaAddress,
+} from '../../utils/address-validation';
 import { NATIVE_ADDRESS } from '../../utils/constants';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { IntentPriceParams } from '../../types/price-params';
-import { IntentQuoteParams } from '../../types/quote-params';
-import { GeniusBridgePriceResponse, GeniusBridgeQuoteResponse } from 'genius-bridge-sdk';
+import { GeniusBridgeConfig } from './genius-bridge.types';
+import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
+import {
+  GeniusBridgePriceParams,
+  GeniusBridgeQuoteParams,
+  GeniusBridgeSdk,
+} from 'genius-bridge-sdk';
 
 let logger: ILogger;
 
-/**
- * The `GeniusBridgeService` class implements the IIntentProtocol interface for cross-chain
- * token swaps using the Genius Bridge protocol. It provides functionality for fetching price
- * quotes and generating transaction data for token transfers across multiple supported
- * blockchain networks.
- *
- * @implements {IIntentProtocol}
- */
 export class GeniusBridgeService implements IIntentProtocol {
-  /**
-   * RPC URLs for each supported blockchain network.
-   */
-  protected readonly rpcUrls: Record<number, string | string[]> = {};
-
-  /**
-   * The protocol identifier for Genius Bridge.
-   */
   public readonly protocol = ProtocolEnum.GENIUS_BRIDGE;
-
-  /**
-   * The list of blockchain networks supported by the Genius Bridge service.
-   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
     ChainIdEnum.OPTIMISM,
     ChainIdEnum.POLYGON,
+    ChainIdEnum.SONIC,
     ChainIdEnum.BSC,
     ChainIdEnum.AVALANCHE,
     ChainIdEnum.BASE,
     ChainIdEnum.SOLANA,
+    // Add other supported chains
   ];
-
-  /**
-   * Indicates that the service does not operate only on a single blockchain.
-   */
   public readonly singleChain = false;
-
-  /**
-   * Indicates that the service supports cross-chain operations.
-   */
   public readonly multiChain = true;
+  protected geniusBridgeSdk: GeniusBridgeSdk;
 
-  /**
-   * The base URL for the Genius Bridge API.
-   */
-  public readonly baseUrl: string;
-
-  /**
-   * The endpoint for price quote requests.
-   */
-  private readonly _priceEndpoint: string | undefined;
-
-  /**
-   * The endpoint for transaction quote requests.
-   */
-  private readonly _quoteEndpoint: string | undefined;
-
-  /**
-   * Creates a new instance of the GeniusBridgeService.
-   *
-   * @param {GeniusIntentsSDKConfig & {geniusBridgeBaseUrl?: string; geniusBridgePriceEndpoint?: string; geniusBridgeQuoteEndpoint?: string}} config -
-   * Configuration parameters for the service, including optional custom API endpoints.
-   *
-   * @throws {SdkError} If no RPC URLs are provided for the supported blockchains.
-   */
-  constructor(
-    config?: GeniusIntentsSDKConfig & {
-      geniusBridgeBaseUrl?: string;
-      geniusBridgePriceEndpoint?: string;
-      geniusBridgeQuoteEndpoint?: string;
-    },
-  ) {
+  constructor(config?: GeniusIntentsSDKConfig & GeniusBridgeConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -106,60 +54,22 @@ export class GeniusBridgeService implements IIntentProtocol {
     }
     logger = LoggerFactory.getLogger();
 
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
-    if (!config?.rpcUrls) {
-      logger.error('GeniusBridge Service requires RPC URLs');
-      throw sdkError(SdkErrorEnum.MISSING_RPC_URL, 'GeniusBridge Service requires RPC URLs');
-    }
-
-    // Apply configuration with defaults
-    /**
-     * @samuel-videau Need to migrate this off of your personal domain
-     */
-    this.baseUrl = config?.geniusBridgeBaseUrl || 'https://bridge-api.tradegeniuses.net/';
-    this._priceEndpoint = config?.geniusBridgePriceEndpoint || '/quoting/price';
-    this._quoteEndpoint = config?.geniusBridgeQuoteEndpoint || '/quoting/quote';
+    this.geniusBridgeSdk = new GeniusBridgeSdk(config);
   }
 
-  /**
-   * Checks if the provided configuration object matches the expected type.
-   *
-   * @typeParam T - The expected configuration type, extending an object with string values.
-   * @param _config - The configuration object to validate.
-   * @returns `true` if the configuration is considered correct. For GeniusBridge, all config fields are optional,
-   * so this always returns `true`.
-   */
-  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // GeniusBridge has no required config fields, all are optional
     return true;
   }
 
-  /**
-   * Fetches a price quote for a cross-chain token swap from the Genius Bridge API.
-   *
-   * @param {IntentPriceParams} params - The parameters required for the price quote.
-   *
-   * @returns {Promise<PriceResponse>} A promise that resolves to a `PriceResponse` object containing:
-   * - The amount of output tokens expected from the swap.
-   * - The raw response from the Genius Bridge API.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If there's an error fetching the price from Genius Bridge.
-   */
   public async fetchPrice(params: IntentPriceParams): Promise<PriceResponse> {
     try {
       this.validatePriceParams(params);
       const transformedParams = this.transformPriceParams(params);
 
-      const response = await this.makeGeniusBridgePriceRequest(transformedParams);
-
-      if (response instanceof Error) {
-        throw response;
-      }
+      const response = await this.geniusBridgeSdk.fetchPrice(transformedParams);
 
       logger.debug('Successfully received price info from GeniusBridge', {
         amountOut: response.amountOut,
@@ -181,89 +91,62 @@ export class GeniusBridgeService implements IIntentProtocol {
         protocolResponse: response,
       };
     } catch (error) {
-      const formattedError = createErrorMessage(error, this.protocol);
-
-      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.PRICE_NOT_FOUND,
+        `Failed to fetch GeniusBridge price, error: ${errorMessage}`,
+      );
     }
   }
 
-  /**
-   * Fetches a swap quote from the Genius Bridge API and builds the transaction data
-   * needed to execute the cross-chain swap.
-   *
-   * @param {IntentQuoteParams} params - The parameters required for the swap quote.
-   *
-   * @returns {Promise<QuoteResponse>} A promise that resolves to a `QuoteResponse` object containing:
-   * - The expected amount of output tokens.
-   * - The transaction data needed to execute the swap.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If the Genius Bridge API returns an invalid response.
-   * @throws {SdkError} If there's an error fetching the quote.
-   */
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
     try {
       this.validateQuoteParams(params);
       const transformedParams = this.transformQuoteParams(params);
 
-      const priceResponseRaw = await this.makeGeniusBridgePriceRequest(transformedParams);
+      const response = await this.geniusBridgeSdk.fetchQuote(transformedParams);
 
-      if (priceResponseRaw instanceof Error || !priceResponseRaw) {
-        throw priceResponseRaw;
-      }
-
-      // Ensure feesDetails.swapOut and feesDetails.call are always strings
-      const priceResponse = {
-        ...priceResponseRaw,
-        feesDetails: {
-          ...priceResponseRaw.feesDetails,
-          swapOut: priceResponseRaw.feesDetails.swapOut ?? '',
-          call: priceResponseRaw.feesDetails.call ?? '',
-        },
+      const approval: Erc20Approval = {
+        token: response.tokenIn,
+        amount: response.amountIn,
+        spender: response.evmExecutionPayload?.to || '',
+        txnData: response.approvalRequired ? response.approvalRequired.payload : undefined,
+        required: !!response.approvalRequired,
       };
 
-      if (priceResponse.feesDetails.call === '') {
-        // throw an error
-        throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, 'Missing call fee details');
-      }
-
-      const response = await this.makeGeniusBridgeQuoteRequest({
-        ...transformedParams,
-        priceResponse,
-        svmTokenAmountPercentage: 90,
-      });
-
-      if (response instanceof Error) {
-        throw response;
-      }
-
-      const isEvm = isEVMNetwork(params.networkIn);
-
       logger.debug('Successfully received quote info from GeniusBridge', {
-        amountOut: priceResponse.amountOut,
-        minAmountOut: priceResponse.minAmountOut,
-        fee: priceResponse.fee,
+        amountOut: response.amountOut,
+        minAmountOut: response.minAmountOut,
+        fee: response.fee,
       });
 
-      const executionPayloadKey = isEvm ? 'evmExecutionPayload' : 'svmExecutionPayload';
+      let evmQuoteExecutionPayload: EvmQuoteExecutionPayload | undefined = undefined;
+      let svmTransactionData: string[] | undefined = undefined;
 
-      // First, split the logic for EVM and non-EVM paths more clearly
-      const executionPayload = isEvm
-        ? {
-            // EVM path
-            transactionData: response.evmExecutionPayload
-              ? {
-                  data: response.evmExecutionPayload.data,
-                  to: response.evmExecutionPayload.to,
-                  value: response.evmExecutionPayload.value || '0',
-                  gasEstimate: '0',
-                  gasLimit: '0',
-                }
-              : undefined,
-          }
-        : response.svmExecutionPayload
-          ? response.svmExecutionPayload // Ensure it's wrapped as a string array
-          : [];
+      if (response.evmExecutionPayload) {
+        evmQuoteExecutionPayload = {
+          transactionData: {
+            to: response.evmExecutionPayload?.to || '',
+            data: response.evmExecutionPayload?.data || '',
+            value: response.evmExecutionPayload?.value || '0',
+            gasLimit: response.evmExecutionPayload?.gasLimit || '0',
+          },
+          approval,
+        };
+      }
+
+      if (response.svmExecutionPayload) {
+        svmTransactionData = response.svmExecutionPayload || [];
+      }
+
+      if ((!svmTransactionData || !svmTransactionData.length) && !evmQuoteExecutionPayload) {
+        logger.error('GeniusBridge execution payload is missing');
+        throw sdkError(
+          SdkErrorEnum.QUOTE_NOT_FOUND,
+          'GeniusBridge execution payload is missing in the quote response',
+        );
+      }
 
       return {
         protocol: this.protocol,
@@ -272,135 +155,25 @@ export class GeniusBridgeService implements IIntentProtocol {
         tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
         amountIn: params.amountIn,
-        amountOut: priceResponse.amountOut,
-        estimatedGas: '0',
+        amountOut: response.amountOut,
         slippage: params.slippage,
         priceImpact: undefined, // GeniusBridge doesn't provide price impact
         from: params.from,
         receiver: params.receiver || params.from,
-        [executionPayloadKey]: executionPayload,
+        evmExecutionPayload: evmQuoteExecutionPayload,
+        svmExecutionPayload: svmTransactionData,
         protocolResponse: response,
       };
     } catch (error) {
-      const formattedError = createErrorMessage(error, this.protocol);
-
-      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.QUOTE_NOT_FOUND,
+        `Failed to fetch GeniusBridge quote, error: ${errorMessage}`,
+      );
     }
   }
 
-  /**
-   * Makes a request to the Genius Bridge API to get a price quote for a cross-chain swap.
-   *
-   * @param {GeniusBridgePriceRequestParams} params - The parameters for the price request.
-   *
-   * @returns {Promise<GeniusBridgePriceResponse | Error>} A promise that resolves to the price response or an error.
-   */
-  public async makeGeniusBridgePriceRequest(
-    params: GeniusBridgePriceRequestParams,
-  ): Promise<GeniusBridgePriceResponse | Error> {
-    const url = `${this.baseUrl}${this._priceEndpoint}`;
-
-    logger.debug('Making GeniusBridge price request', {
-      networkIn: params.networkIn,
-      networkOut: params.networkOut,
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountIn: params.amountIn,
-    });
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        const errorData = (await response
-          .json()
-          .catch(() => ({ message: 'Unknown error' }))) as Error;
-        throw new Error(`GeniusBridge API error: ${errorData.message || response.statusText}`);
-      }
-
-      const price = await response.json();
-      return price as GeniusBridgePriceResponse;
-    } catch (error) {
-      const formattedError = createErrorMessage(error, this.protocol);
-
-      return sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
-    }
-  }
-
-  /**
-   * Makes a request to the Genius Bridge API to get a transaction quote for a cross-chain swap.
-   *
-   * @param {GeniusBrdidgeQuoteRequestParams} params - The parameters for the quote request.
-   *
-   * @returns {Promise<GeniusBridgeQuoteResponse | Error>} A promise that resolves to the quote response or an error.
-   */
-  public async makeGeniusBridgeQuoteRequest(
-    params: GeniusBrdidgeQuoteRequestParams,
-  ): Promise<GeniusBridgeQuoteResponse | Error> {
-    const url = `${this.baseUrl}${this._quoteEndpoint}`;
-
-    logger.debug('Making GeniusBridge quote request', {
-      networkIn: params.networkIn,
-      networkOut: params.networkOut,
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountIn: params.amountIn,
-      to: params.to,
-    });
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          networkIn: params.networkIn,
-          networkOut: params.networkOut,
-          amountIn: params.amountIn,
-          tokenIn: params.tokenIn,
-          tokenOut: params.tokenOut,
-          slippage: params.slippage,
-          from: params.from,
-          sponsor: params.sponsor || false,
-          priceResponse: params.priceResponse,
-          to: params.to,
-          authority: params.authority,
-          permit: params.permit,
-          svmTokenAmountPercentage: params.svmTokenAmountPercentage,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = (await response
-          .json()
-          .catch(() => ({ message: 'Unknown error' }))) as Error;
-        throw new Error(`GeniusBridge API error: ${errorData.message || response.statusText}`);
-      }
-
-      const quote = await response.json();
-      return quote as GeniusBridgeQuoteResponse;
-    } catch (error) {
-      const formattedError = createErrorMessage(error, this.protocol);
-
-      return sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
-    }
-  }
-
-  /**
-   * Validates the parameters for a price quote request.
-   *
-   * @param {IntentPriceParams} params - The parameters to validate.
-   *
-   * @throws {SdkError} If any of the parameters are invalid or unsupported.
-   */
   protected validatePriceParams(params: IntentPriceParams): void {
     const { networkIn, networkOut, tokenIn, tokenOut, amountIn } = params;
 
@@ -434,46 +207,43 @@ export class GeniusBridgeService implements IIntentProtocol {
     }
 
     // Validate token addresses based on network type
-    if (isSolanaNetwork(networkIn)) {
+    if (isSolanaNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateSolanaAddress(tokenIn);
-      } catch (error) {
-        const formattedError = createErrorMessage(error, this.protocol);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error: unknown) {
+        logger.error(`Invalid Solana token address: ${tokenIn}`);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenIn}`);
       }
     } else if (isEVMNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateAndChecksumEvmAddress(tokenIn);
-      } catch (error) {
-        const formattedError = createErrorMessage(error, this.protocol);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error: unknown) {
+        logger.error(`Invalid EVM token address: ${tokenIn}`);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenIn}`);
       }
     }
 
-    if (isSolanaNetwork(networkOut)) {
+    if (isSolanaNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateSolanaAddress(tokenOut);
-      } catch (error) {
-        const formattedError = createErrorMessage(error, this.protocol);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error: unknown) {
+        logger.error(`Invalid Solana token address: ${tokenOut}`);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenOut}`);
       }
     } else if (isEVMNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateAndChecksumEvmAddress(tokenOut);
-      } catch (error) {
-        const formattedError = createErrorMessage(error, this.protocol);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error: unknown) {
+        logger.error(`Invalid EVM token address: ${tokenOut}`);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenOut}`);
       }
     }
   }
 
-  /**
-   * Validates the parameters for a quote request, extending the price parameters validation.
-   *
-   * @param {IntentQuoteParams} params - The parameters to validate.
-   *
-   * @throws {SdkError} If any of the parameters are invalid or missing.
-   */
   protected validateQuoteParams(params: IntentQuoteParams): void {
     this.validatePriceParams(params);
 
@@ -487,34 +257,30 @@ export class GeniusBridgeService implements IIntentProtocol {
       if (isSolanaNetwork(params.networkOut)) {
         try {
           validateSolanaAddress(params.receiver);
-        } catch (error) {
-          const formattedError = createErrorMessage(error, this.protocol);
-          throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error: unknown) {
+          logger.error(`Invalid Solana receiver address: ${params.receiver}`);
+          throw sdkError(
+            SdkErrorEnum.INVALID_PARAMS,
+            `Invalid Solana receiver address: ${params.receiver}`,
+          );
         }
       } else if (isEVMNetwork(params.networkOut)) {
         try {
           validateAndChecksumEvmAddress(params.receiver);
-        } catch (error) {
-          const formattedError = createErrorMessage(error, this.protocol);
-          throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error: unknown) {
+          logger.error(`Invalid EVM receiver address: ${params.receiver}`);
+          throw sdkError(
+            SdkErrorEnum.INVALID_PARAMS,
+            `Invalid EVM receiver address: ${params.receiver}`,
+          );
         }
       }
     }
   }
 
-  /**
-   * Transforms the price parameters to the format expected by the Genius Bridge API.
-   *
-   * @param {IntentPriceParams} params - The original price parameters.
-   *
-   * @returns {Object} The transformed parameters ready for the Genius Bridge API, including:
-   * - Network IDs for source and destination chains
-   * - Token addresses
-   * - Amount and slippage
-   * - Source address
-   * - Sponsorship flag
-   */
-  protected transformPriceParams(params: IntentPriceParams): IntentPriceParams {
+  protected transformPriceParams(params: IntentPriceParams): GeniusBridgePriceParams {
     let { networkIn, networkOut, tokenIn, tokenOut } = params;
     const { amountIn, slippage, from } = params;
 
@@ -535,37 +301,14 @@ export class GeniusBridgeService implements IIntentProtocol {
       amountIn,
       slippage,
       from,
-      sponsor: false,
     };
   }
 
-  /**
-   * Transforms the quote parameters to the format expected by the Genius Bridge API.
-   *
-   * @param {IntentQuoteParams} params - The original quote parameters.
-   *
-   * @returns {Object} The transformed parameters ready for the Genius Bridge API, extending
-   * the price parameters with:
-   * - Destination address
-   * - Authority configuration
-   */
-  protected transformQuoteParams(params: IntentQuoteParams): {
-    networkIn: number;
-    networkOut: number;
-    tokenIn: string;
-    tokenOut: string;
-    amountIn: string;
-    slippage: number;
-    from: string;
-    sponsor: boolean;
-    to: string;
-    authority: Authority;
-  } {
-    const transformedPriceParams = this.transformPriceParams(params) as IntentPriceParams;
+  protected transformQuoteParams(params: IntentQuoteParams): GeniusBridgeQuoteParams {
+    const transformedPriceParams = this.transformPriceParams(params);
 
     return {
       ...transformedPriceParams,
-      sponsor: transformedPriceParams.sponsor ?? false,
       to: params.receiver || params.from,
       authority: {
         networkInAddress: params.from,

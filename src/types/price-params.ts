@@ -23,5 +23,4 @@ export type IntentPriceParams = {
 
   overrideParamsDebridge?: Partial<DeBridgePriceParams>;
   overrideParamsJupiter?: Partial<JupiterPriceUrlParams & JupiterSwapUrlParams>;
-  sponsor?: boolean;
 };
