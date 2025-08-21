@@ -80,11 +80,6 @@ export class KyberswapService implements IIntentProtocol {
    */
   public readonly baseUrl: string;
 
-  /**
-   * Creates a new instance of the KyberswapService.
-   *
-   * @param {SDKConfig & KyberswapConfig} config - Configuration parameters for the service.
-   */
   constructor(config: GeniusIntentsSDKConfig & KyberswapConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
