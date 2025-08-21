@@ -109,12 +109,8 @@ export class AftermathService implements IIntentProtocol {
 
       return priceResponse;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch Aftermath price, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
@@ -206,12 +202,8 @@ export class AftermathService implements IIntentProtocol {
 
       return quoteResponse;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch Aftermath quote, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 
