@@ -290,7 +290,7 @@ export class ZeroXService implements IIntentProtocol {
         rawResponse: zeroXQuoteResponse,
       };
 
-      const quoteResponse = {
+      const quoteResponse: QuoteResponse & { protocolResponse: ZeroXQuoteResponse } = {
         protocol: this.protocol,
         tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
@@ -298,7 +298,7 @@ export class ZeroXService implements IIntentProtocol {
         amountOut: zeroXQuoteResponse.buyAmount,
         from: params.from,
         receiver: params.receiver || params.from,
-        executionPayload: {
+        evmExecutionPayload: {
           transactionData: {
             data: zeroXQuoteResponse.transaction.data,
             to: zeroXQuoteResponse.transaction.to,
