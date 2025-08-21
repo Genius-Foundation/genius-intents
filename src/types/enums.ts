@@ -14,6 +14,7 @@ export enum ProtocolEnum {
 }
 
 export enum ChainIdEnum {
+  UNKNOWN = 0,
   SOLANA = 1399811149,
   AVALANCHE = 43114,
   SONIC = 146,
