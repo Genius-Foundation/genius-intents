@@ -1,52 +1,29 @@
 import axios from 'axios';
-
+import { IIntentProtocol } from '../../interfaces/intent-protocol';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { IntentPriceParams } from '../../types/price-params';
+import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
+import { QuoteResponse } from '../../types/quote-response';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
+import { formatAddress } from '../../utils/address';
+import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import {
   OdosPriceResponse,
   OdosAssembleRequestBody,
   OdosQuoteResponse,
   OdosQuoteRequestBody,
 } from './odos.types';
-import { IIntentProtocol } from '../../interfaces/intent-protocol';
-import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { QuoteResponse } from '../../types/quote-response';
-import { formatAddress } from '../../utils/address';
-import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { isNative } from '../../utils/is-native';
 import { sdkError } from '../../utils/throw-error';
-import { createErrorMessage } from '../../utils/create-error-message';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { IntentPriceParams } from '../../types/price-params';
 import { IntentQuoteParams } from '../../types/quote-params';
+import { createErrorMessage } from '../../utils/create-error-message';
 
 let logger: ILogger;
-/**
- * The `OdosService` class implements the IIntentProtocol interface for token swaps
- * using the Odos aggregator. It provides functionality for fetching price quotes
- * and generating transaction data for token swaps on various EVM-compatible blockchains.
- *
- * @implements {IIntentProtocol}
- */
 export class OdosService implements IIntentProtocol {
-  /**
-   * RPC URLs for each supported blockchain network.
-   */
   protected readonly rpcUrls: Record<number, string> = {};
-
-  /**
-   * The protocol identifier for Odos.
-   */
   public readonly protocol = ProtocolEnum.ODOS;
-
-  /**
-   * Flag to determine whether approval transactions should be included.
-   */
   public includeApprovals?: boolean | undefined = false;
-
-  /**
-   * The list of blockchain networks supported by the Odos service.
-   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -57,57 +34,16 @@ export class OdosService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
   ];
-
-  /**
-   * The base URL for the Odos API.
-   */
-  public baseUrl = 'https://api.odos.xyz';
-
-  /**
-   * Indicates that the service operates only on a single blockchain.
-   */
+  baseUrl = 'https://api.odos.xyz';
   public readonly singleChain = true;
-
-  /**
-   * Indicates that the service does not support cross-chain operations.
-   */
   public readonly multiChain = false;
-
-  /**
-   * The endpoint for token price requests.
-   */
   public readonly priceEndpoint = '/pricing/token';
-
-  /**
-   * The endpoint for quote requests.
-   */
   public readonly quoteEndpoint = '/sor/quote/v2';
-
-  /**
-   * The endpoint for transaction assembly.
-   */
   public readonly assemblyEndpoint = '/sor/assemble';
-
-  /**
-   * The complete URL for quote requests.
-   */
   public readonly quoteBaseUrl = this.baseUrl + this.quoteEndpoint;
-
-  /**
-   * The complete URL for price requests.
-   */
   public readonly priceBaseUrl = this.baseUrl + this.priceEndpoint;
-
-  /**
-   * The complete URL for assembly requests.
-   */
   public readonly assemblyBaseUrl = this.baseUrl + this.assemblyEndpoint;
 
-  /**
-   * Creates a new instance of the OdosService.
-   *
-   * @param {SDKConfig} config - Configuration parameters for the service.
-   */
   constructor(config?: GeniusIntentsSDKConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -117,42 +53,15 @@ export class OdosService implements IIntentProtocol {
       LoggerFactory.configure(config.logger);
     }
     logger = LoggerFactory.getLogger();
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
-    this.includeApprovals = config?.includeApprovals;
   }
 
-  /**
-   * Checks if the provided configuration object matches the expected type.
-   *
-   * @typeParam T - The expected configuration type, where all values are strings.
-   * @param _config - The configuration object to validate.
-   * @returns `true` if the configuration is considered correct. For Odos, all config fields are optional,
-   * so this always returns `true`.
-   */
-  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // Odos has no required config fields, all are optional
     return true;
   }
 
-  /**
-   * Fetches a price quote for a token swap from the Odos API.
-   *
-   * @param {IntentPriceParams} params - The parameters required for the price quote.
-   *
-   * @returns {Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: OdosPriceResponse }>}
-   * A promise that resolves to a `PriceResponse` object containing:
-   * - The amount of output tokens expected from the swap.
-   * - Gas estimation for the transaction.
-   * - The raw response from the Odos API.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If the API returns an invalid response.
-   * @throws {SdkError} If there's an error fetching the price.
-   */
   public async fetchPrice(
     params: IntentPriceParams,
   ): Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: OdosPriceResponse }> {
@@ -199,29 +108,16 @@ export class OdosService implements IIntentProtocol {
         protocolResponse: odosPriceResponse,
         slippage: params.slippage,
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: unknown) {
-      const formattedError = createErrorMessage(error, this.protocol);
-      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.PRICE_NOT_FOUND,
+        `Failed to fetch swap price from ODOS: ${errorMessage}`,
+      );
     }
   }
 
-  /**
-   * Fetches a swap quote from the Odos API and builds the transaction data
-   * needed to execute the swap.
-   *
-   * @param {IntentQuoteParams} params - The parameters required for the swap quote.
-   *
-   * @returns {Promise<QuoteResponse & { protocolResponse: OdosQuoteResponse }>}
-   * A promise that resolves to a `QuoteResponse` object containing:
-   * - The expected amount of output tokens.
-   * - The transaction data needed to execute the swap.
-   * - Gas estimates for the transaction.
-   *
-   * @throws {SdkError} If the parameters are invalid or unsupported.
-   * @throws {SdkError} If the API returns an invalid response.
-   * @throws {SdkError} If there's an error fetching the quote.
-   */
   public async fetchQuote(
     params: IntentQuoteParams,
   ): Promise<QuoteResponse & { protocolResponse: OdosQuoteResponse }> {
@@ -296,20 +192,15 @@ export class OdosService implements IIntentProtocol {
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      const formattedError = createErrorMessage(error, this.protocol);
-      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError, {
-        cause: error,
-      });
+      const { errorMessage, errorMessageError } = createErrorMessage(error);
+      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      throw sdkError(
+        SdkErrorEnum.QUOTE_NOT_FOUND,
+        `Failed to fetch swap quote from ODOS: ${errorMessage}`,
+      );
     }
   }
 
-  /**
-   * Transforms the price parameters to the format expected by the Odos API.
-   *
-   * @param {IntentPriceParams} params - The original price parameters.
-   *
-   * @returns {OdosQuoteRequestBody} The transformed parameters ready for the Odos API.
-   */
   protected priceParamsToRequestBody(params: IntentPriceParams): OdosQuoteRequestBody {
     const { tokenIn, tokenOut, amountIn, slippage, networkIn, from } = params;
 
@@ -341,13 +232,6 @@ export class OdosService implements IIntentProtocol {
     return requestBody;
   }
 
-  /**
-   * Validates the parameters for a price quote request.
-   *
-   * @param {IntentPriceParams} params - The parameters to validate.
-   *
-   * @throws {SdkError} If any of the parameters are invalid or unsupported.
-   */
   protected validatePriceParams(params: IntentPriceParams): void {
     const { networkIn, networkOut } = params;
     logger.debug('Validating price params');
@@ -370,13 +254,6 @@ export class OdosService implements IIntentProtocol {
     }
   }
 
-  /**
-   * Type guard to check if a response is a valid Odos price response.
-   *
-   * @param {RawProtocolPriceResponse} response - The response to check.
-   *
-   * @returns {boolean} True if the response is a valid Odos price response.
-   */
   protected isOdosPriceResponse(response: RawProtocolPriceResponse): response is OdosPriceResponse {
     return 'pathId' in response;
   }
