@@ -1,5 +1,5 @@
 export type FourMemeConfig = {
-  bscRpcUrl?: string;
+  bscRpcUrl: string;
 };
 
 export type FourMemePriceResponse = {

@@ -26,16 +26,6 @@ let logger: ILogger;
  */
 export class FourMemeService implements IIntentProtocol {
   /**
-   * RPC URLs for each supported blockchain network.
-   */
-  protected readonly rpcUrls: Record<number, string> = {};
-
-  /**
-   * Flag to determine whether approval transactions should be included.
-   */
-  public includeApprovals: boolean | undefined = false;
-
-  /**
    * The protocol identifier for four.meme Protocol.
    */
   public readonly protocol = ProtocolEnum.FOUR_MEME;
@@ -107,7 +97,7 @@ export class FourMemeService implements IIntentProtocol {
    *
    * @throws {SdkError} If no RPC URL is provided for BSC.
    */
-  constructor(config?: GeniusIntentsSDKConfig & FourMemeConfig) {
+  constructor(config: GeniusIntentsSDKConfig & FourMemeConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -118,28 +108,12 @@ export class FourMemeService implements IIntentProtocol {
 
     logger = LoggerFactory.getLogger();
 
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
-
-    // Initialize _provider for BSC
-    const bscRpcUrl = this.rpcUrls[ChainIdEnum.BSC] || config?.bscRpcUrl;
-    if (!bscRpcUrl) {
-      logger.error('BSC RPC URL is required for four.meme service');
-      throw sdkError(
-        SdkErrorEnum.MISSING_INITIALIZATION,
-        'BSC RPC URL is required for four.meme service',
-      );
-    }
-
-    this._provider = new ethers.JsonRpcProvider(bscRpcUrl);
+    this._provider = new ethers.JsonRpcProvider(config.bscRpcUrl);
     this._helperContract = new ethers.Contract(
       this._tokenManagerHelperV3,
       this._helperAbi,
       this._provider,
     );
-
-    this.includeApprovals = config?.includeApprovals;
   }
 
   /**
