@@ -371,11 +371,6 @@ export class OkxService implements IIntentProtocol {
         }
       } else {
         // Have to fetch the price if we are on solana to determine the amount out
-        // const priceResponse = await this.fetchPrice({
-        //   ...params,
-        //   networkIn: Number(this.solanaChainId),
-        //   networkOut: Number(this.solanaChainId),
-        // });
         const quoteEndpoint = this.quoteEndpoint;
         const quoteUrlParams = new URLSearchParams({
           ...requestBody,
