@@ -20,6 +20,7 @@ import { createErrorMessage } from '../../utils/create-error-message';
 import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { IntentPriceParams } from '../../types/price-params';
 import { IntentQuoteParams } from '../../types/quote-params';
+import { chainIdToName } from '../../utils/chain-id-name';
 
 let logger: ILogger;
 /**
@@ -30,16 +31,6 @@ let logger: ILogger;
  * @implements {IIntentProtocol}
  */
 export class KyberswapService implements IIntentProtocol {
-  /**
-   * RPC URLs for each supported blockchain network.
-   */
-  protected readonly rpcUrls: Record<number, string> = {};
-
-  /**
-   * Flag to determine whether approval transactions should be included.
-   */
-  public includeApprovals: boolean | undefined = false;
-
   /**
    * The protocol identifier for KyberSwap.
    */
@@ -56,6 +47,7 @@ export class KyberswapService implements IIntentProtocol {
     ChainIdEnum.BSC,
     ChainIdEnum.AVALANCHE,
     ChainIdEnum.BASE,
+    ChainIdEnum.SONIC,
   ];
 
   /**
@@ -67,11 +59,6 @@ export class KyberswapService implements IIntentProtocol {
    * Indicates that the service does not support cross-chain operations.
    */
   public readonly multiChain = false;
-
-  /**
-   * The base URL for the KyberSwap API.
-   */
-  baseUrl = 'https://aggregator-api.kyberswap.com';
 
   /**
    * The endpoint for price quote requests.
@@ -86,14 +73,19 @@ export class KyberswapService implements IIntentProtocol {
   /**
    * The client ID for KyberSwap API requests.
    */
-  public readonly clientId: string = '';
+  public readonly clientId: string;
+
+  /**
+   * The base URL for the KyberSwap API.
+   */
+  public readonly baseUrl: string;
 
   /**
    * Creates a new instance of the KyberswapService.
    *
    * @param {SDKConfig & KyberswapConfig} config - Configuration parameters for the service.
    */
-  constructor(config?: GeniusIntentsSDKConfig & KyberswapConfig) {
+  constructor(config: GeniusIntentsSDKConfig & KyberswapConfig) {
     if (config?.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
@@ -103,17 +95,8 @@ export class KyberswapService implements IIntentProtocol {
     }
 
     logger = LoggerFactory.getLogger();
-    if (config?.rpcUrls) {
-      this.rpcUrls = config.rpcUrls;
-    }
-    if (config?.clientId) {
-      this.clientId = config.clientId;
-    }
-    if (config?.privateUrl) {
-      this.baseUrl = config.privateUrl;
-    }
-
-    this.includeApprovals = config?.includeApprovals;
+    this.baseUrl = config?.kyberswapPrivateUrl || 'https://aggregator-api.kyberswap.com';
+    this.clientId = config.kyberswapClientId;
   }
 
   /**
@@ -155,7 +138,7 @@ export class KyberswapService implements IIntentProtocol {
     logger.debug('Generated KyberSwap price request body', requestBody);
 
     try {
-      const chainName = this._chainIdToName(params.networkIn);
+      const chainName = chainIdToName(params.networkIn);
       const url = new URL(`${this.baseUrl}/${chainName}${this.priceEndpoint}`);
 
       // Add query parameters
@@ -167,13 +150,11 @@ export class KyberswapService implements IIntentProtocol {
       });
 
       logger.debug(`Making request to KyberSwap API: ${url.toString()}`);
+      const headers: Record<string, string> = {};
+      headers['x-client-id'] = this.clientId;
+
       const response = await axios.get<{ data: KyberswapPriceResponse }>(url.toString(), {
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'Content-Type': 'application/json',
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'x-client-id': this.clientId,
-        },
+        headers,
       });
 
       const kyberswapPriceResponse = response.data.data;
@@ -271,17 +252,14 @@ export class KyberswapService implements IIntentProtocol {
     logger.debug('Generated KyberSwap quote request body', quoteRequestBody);
 
     try {
-      const chainName = this._chainIdToName(networkIn);
+      const chainName = chainIdToName(networkIn);
       const url = `${this.baseUrl}/${chainName}${this.quoteEndpoint}`;
 
       logger.debug(`Making request to KyberSwap quote API: ${url}`);
+      const headers: Record<string, string> = {};
+      headers['x-client-id'] = this.clientId;
       const response = await axios.post<{ data: KyberswapQuoteResponse }>(url, quoteRequestBody, {
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'Content-Type': 'application/json',
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'x-client-id': this.clientId,
-        },
+        headers,
       });
 
       const kyberswapQuoteResponse = response.data.data;
@@ -404,32 +382,4 @@ export class KyberswapService implements IIntentProtocol {
   ): response is KyberswapPriceResponse {
     return 'routeSummary' in response;
   }
-
-  /**
-   * Converts a chain ID to the corresponding network name used by the KyberSwap API.
-   *
-   * @param {ChainIdEnum} chainId - The chain ID to convert.
-   *
-   * @returns {string} The network name for the given chain ID.
-   *
-   * @throws {Error} If the chain ID is not supported.
-   */
-  private _chainIdToName = (chainId: ChainIdEnum): string => {
-    const chainMap: Record<number, string> = {
-      [ChainIdEnum.ETHEREUM]: 'ethereum',
-      [ChainIdEnum.BSC]: 'bsc',
-      [ChainIdEnum.POLYGON]: 'polygon',
-      [ChainIdEnum.AVALANCHE]: 'avalanche',
-      [ChainIdEnum.ARBITRUM]: 'arbitrum',
-      [ChainIdEnum.OPTIMISM]: 'optimism',
-      [ChainIdEnum.BASE]: 'base',
-      [ChainIdEnum.SONIC]: 'sonic',
-    };
-
-    const name = chainMap[chainId];
-    if (!name) {
-      throw new Error(`Unsupported network: ${chainId}`);
-    }
-    return name;
-  };
 }
