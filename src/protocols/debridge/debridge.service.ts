@@ -7,7 +7,14 @@ import {
   DeBridgeQuoteResponse,
   DeBridgePriceParams,
   DeBridgeQuoteParams,
+  DebridgeCancelOrderResponse,
+  DebridgeFeeResponse,
+  DebridgeStatusResponse,
 } from './debridge.types';
+import {
+  EvmQuoteExecutionPayload,
+  SvmQuoteExecutionPayload,
+} from '../../types/quote-execution-payload';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { IntentPriceParams } from '../../types/price-params';
 import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
@@ -21,10 +28,6 @@ import { createErrorMessage } from '../../utils/create-error-message';
 import { validateSolanaAddress } from '../../utils/address';
 import { validateAndChecksumEvmAddress } from '../../utils/address-validation';
 import { ZERO_ADDRESS } from '../../utils/constants';
-import {
-  EvmQuoteExecutionPayload,
-  SvmQuoteExecutionPayload,
-} from '../../types/quote-execution-payload';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { isNative } from '../../utils/is-native';
 
@@ -62,7 +65,6 @@ export class DeBridgeService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
     ChainIdEnum.SOLANA,
-    // Add other supported chains as needed
   ];
 
   /**
@@ -83,13 +85,16 @@ export class DeBridgeService implements IIntentProtocol {
   /**
    * The chain ID used for Solana in the DeBridge protocol.
    */
-  public readonly solanaChainIdEnum: number = 7565164;
+  public readonly solanaChainId: number = 7565164;
 
   /**
    * The chain ID used for Sonic in the DeBridge protocol.
    */
-  public readonly sonicChainIdEnum: number = 100000014;
-
+  public readonly sonicChainId: number = 100000014;
+  /**
+   * The chain ID used for HyperEVM in the DeBridge protocol.
+   */
+  public readonly hyperEvmChainId: number = 100000022;
   /**
    * Optional access token for the DeBridge API.
    */
@@ -124,6 +129,37 @@ export class DeBridgeService implements IIntentProtocol {
   }): config is T {
     // Simple validation - can be extended based on specific requirements
     return config && typeof config === 'object';
+  }
+
+  /**
+   * Fetches the fee structure for DeBridge's DLN (Decentralized Liquidity Network) on a specific network.
+   *
+   * @param {ChainIdEnum} network - The blockchain network ID to fetch fees for.
+   *
+   * @returns {Promise<DebridgeDFeeResponse>} A promise that resolves to an object containing:
+   * - The fixed fee amount.
+   * - The transfer fee amount.
+   * - The transfer fee basis points.
+   *
+   * @note This is a simplified implementation. In production, these values would be fetched from the network.
+   */
+  public async fetchDLNFee(network: ChainIdEnum): Promise<DebridgeFeeResponse> {
+    try {
+      // This is a simplified implementation - in a real scenario, you'd fetch these from the network
+      return {
+        fixFee: '0',
+        transferFee: '0',
+        transferFeeBps: '0',
+      };
+    } catch (error) {
+      const thrownError = error as Error;
+      logger.error(`Failed to fetch DLN fees for network ${network}`, thrownError);
+      return {
+        fixFee: '0',
+        transferFee: '0',
+        transferFeeBps: '0',
+      };
+    }
   }
 
   /**
@@ -165,13 +201,10 @@ export class DeBridgeService implements IIntentProtocol {
         priceImpact: undefined, // DeBridge doesn't provide price impact
         protocolResponse: dlnQuote,
       };
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch DeBridge price, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
@@ -245,13 +278,62 @@ export class DeBridgeService implements IIntentProtocol {
       };
 
       return response;
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch DeBridge quote, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
+    }
+  }
+
+  /**
+   * Retrieves the order IDs associated with a transaction hash.
+   *
+   * @param {string} hash - The transaction hash to query.
+   *
+   * @returns {Promise<DebridgeStatusResponse>} A promise that resolves to a response object
+   * containing the order IDs associated with the transaction hash.
+   *
+   * @throws {SdkError} If there's an error fetching the transaction ID.
+   */
+  public async fetchTransactionId(hash: string): Promise<DebridgeStatusResponse> {
+    try {
+      const url = `https://stats-api.dln.trade/api/Transaction/${hash}/orderIds`;
+      const response = await axios.get<DebridgeStatusResponse>(url);
+      return response.data;
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
+    }
+  }
+
+  /**
+   * Fetches the transaction data needed to cancel a cross-chain swap.
+   *
+   * @param {string} hash - The transaction hash of the swap to cancel.
+   *
+   * @returns {Promise<DebridgeCancelOrderResponse>} A promise that resolves to a response object
+   * containing the transaction data needed to cancel the swap.
+   *
+   * @throws {SdkError} If the swap ID cannot be found.
+   * @throws {SdkError} If there's an error fetching the cancel transaction.
+   */
+  public async fetchCancelTransaction(hash: string): Promise<DebridgeCancelOrderResponse> {
+    try {
+      const idResponse = await this.fetchTransactionId(hash);
+      const swapId = idResponse.orderIds[0];
+
+      if (!swapId) {
+        throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, 'Swap ID not found');
+      }
+
+      const url = `https://dln.debridge.finance/v1.0/dln/order/${swapId}/cancel-tx`;
+      const response = await axios.get<DebridgeCancelOrderResponse>(url);
+      return response.data;
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
@@ -301,8 +383,8 @@ export class DeBridgeService implements IIntentProtocol {
     const isSrcSonic = params.networkIn === ChainIdEnum.SONIC;
     const isDstSonic = params.networkOut === ChainIdEnum.SONIC;
 
-    let srcChainId = isSourceSolana ? this.solanaChainIdEnum : params.networkIn;
-    let dstChainId = isDestSolana ? this.solanaChainIdEnum : params.networkOut;
+    let srcChainId = isSourceSolana ? this.solanaChainId : params.networkIn;
+    let dstChainId = isDestSolana ? this.solanaChainId : params.networkOut;
 
     // Handle Sonic chain IDs if needed
     if (isSrcSonic) {
@@ -355,13 +437,10 @@ export class DeBridgeService implements IIntentProtocol {
       }
 
       return response.data;
-    } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch DLN quote`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to fetch DLN quote, error: ${errorMessage}`,
-      );
+    } catch (error) {
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
@@ -405,36 +484,32 @@ export class DeBridgeService implements IIntentProtocol {
     if (isSolanaNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateSolanaAddress(tokenIn);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error: unknown) {
-        logger.error(`Invalid Solana token address: ${tokenIn}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenIn}`);
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     } else if (isEVMNetwork(networkIn) && !isNative(tokenIn)) {
       try {
         validateAndChecksumEvmAddress(tokenIn);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error: unknown) {
-        logger.error(`Invalid EVM token address: ${tokenIn}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenIn}`);
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     }
 
     if (isSolanaNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateSolanaAddress(tokenOut);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error: unknown) {
-        logger.error(`Invalid Solana token address: ${tokenOut}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid Solana token address: ${tokenOut}`);
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     } else if (isEVMNetwork(networkOut) && !isNative(tokenOut)) {
       try {
         validateAndChecksumEvmAddress(tokenOut);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error: unknown) {
-        logger.error(`Invalid EVM token address: ${tokenOut}`);
-        throw sdkError(SdkErrorEnum.INVALID_PARAMS, `Invalid EVM token address: ${tokenOut}`);
+        const formattedError = createErrorMessage(error, this.protocol);
+        throw sdkError(SdkErrorEnum.INVALID_PARAMS, formattedError);
       }
     }
   }
@@ -473,15 +548,23 @@ export class DeBridgeService implements IIntentProtocol {
 
     // Handle chainId transformation for Sonic
     if (networkIn === ChainIdEnum.SONIC) {
-      networkIn = this.sonicChainIdEnum; // or any other default chain for Sonic
+      networkIn = this.sonicChainId; // or any other default chain for Sonic
     }
     if (networkOut === ChainIdEnum.SONIC) {
-      networkOut = this.sonicChainIdEnum; // or any other default chain for Sonic
+      networkOut = this.sonicChainId; // or any other default chain for Sonic
+    }
+
+    if (networkIn === ChainIdEnum.HYPEREVM) {
+      networkIn = this.hyperEvmChainId; // Use HyperEVM chain ID
+    }
+
+    if (networkOut === ChainIdEnum.HYPEREVM) {
+      networkOut = this.hyperEvmChainId; // Use HyperEVM chain ID
     }
 
     // Handle token address transformation
     if (isSolanaNetwork(networkIn)) {
-      networkIn = this.solanaChainIdEnum;
+      networkIn = this.solanaChainId;
     } else if (isNative(tokenIn)) {
       tokenIn = ZERO_ADDRESS;
     } else {
@@ -489,7 +572,7 @@ export class DeBridgeService implements IIntentProtocol {
     }
 
     if (isSolanaNetwork(networkOut)) {
-      networkOut = this.solanaChainIdEnum;
+      networkOut = this.solanaChainId;
     } else if (isNative(tokenOut)) {
       tokenOut = ZERO_ADDRESS;
     } else {

@@ -48,8 +48,10 @@ export type ZeroXBalanceIssue = {
 };
 
 export type ZeroXIssues = {
+  allowance: null | unknown;
   balance: ZeroXBalanceIssue | null;
   simulationIncomplete: boolean;
+  invalidSourcesPassed: unknown[];
 };
 
 // Route-related types
@@ -91,7 +93,7 @@ export type ZeroXTransaction = {
 };
 
 // Main API response type - this matches the raw response from the 0x API
-export type ZeroXQuoteResponse = {
+export type ZeroXSwapQuoteResponse = {
   blockNumber: string;
   buyAmount: string;
   buyToken: string;
@@ -116,9 +118,18 @@ export type ZeroXPriceResponse = {
     tokenOut: string;
     amountOut: string;
     gas: string;
-    route: string[][];
+    route: unknown[][];
   };
   routerAddress: string;
+};
+
+export type ZeroXQuoteResponse = {
+  amountIn: string;
+  amountOut: string;
+  gas: string;
+  data: string;
+  routerAddress: string;
+  rawResponse: ZeroXSwapQuoteResponse;
 };
 
 // Multi-quote params (if needed)
@@ -134,5 +145,6 @@ export type ZeroXMultiPriceParams = {
 export type ZeroXMultiQuoteParams = {
   network: ChainIdEnum;
   fromAddress: string;
+  routeSummary: unknown; // You may want to define a specific type here
   receiver?: string;
 };

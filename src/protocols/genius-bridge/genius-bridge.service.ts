@@ -1,3 +1,12 @@
+import {
+  GeniusBridgePriceParams,
+  GeniusBridgeQuoteParams,
+  GeniusBridgeSdk,
+} from 'genius-bridge-sdk';
+import {
+  validateAndChecksumEvmAddress,
+  validateSolanaAddress,
+} from '../../utils/address-validation';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { Erc20Approval } from '../../types/erc20-approval';
@@ -11,23 +20,21 @@ import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
 import { isEVMNetwork, isSolanaNetwork } from '../../utils/check-vm';
 import { createErrorMessage } from '../../utils/create-error-message';
-import {
-  validateAndChecksumEvmAddress,
-  validateSolanaAddress,
-} from '../../utils/address-validation';
 import { NATIVE_ADDRESS } from '../../utils/constants';
 import { GeniusBridgeConfig } from './genius-bridge.types';
 import { EvmQuoteExecutionPayload } from '../../types/quote-execution-payload';
-import {
-  GeniusBridgePriceParams,
-  GeniusBridgeQuoteParams,
-  GeniusBridgeSdk,
-} from 'genius-bridge-sdk';
 
 let logger: ILogger;
 
 export class GeniusBridgeService implements IIntentProtocol {
+  /**
+   * The protocol identifier for the Genius Bridge.
+   */
   public readonly protocol = ProtocolEnum.GENIUS_BRIDGE;
+
+  /**
+   * The list of blockchain networks supported by the Genius Bridge.
+   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -40,8 +47,20 @@ export class GeniusBridgeService implements IIntentProtocol {
     ChainIdEnum.SOLANA,
     // Add other supported chains
   ];
+
+  /**
+   * Indicates that the service operates only on a single blockchain.
+   */
   public readonly singleChain = false;
+
+  /**
+   * Indicates that the service supports cross-chain operations.
+   */
   public readonly multiChain = true;
+
+  /**
+   * The SDK instance for interacting with the Genius Bridge.
+   */
   protected geniusBridgeSdk: GeniusBridgeSdk;
 
   constructor(config?: GeniusIntentsSDKConfig & GeniusBridgeConfig) {
@@ -57,7 +76,7 @@ export class GeniusBridgeService implements IIntentProtocol {
     this.geniusBridgeSdk = new GeniusBridgeSdk(config);
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // GeniusBridge has no required config fields, all are optional
@@ -91,11 +110,11 @@ export class GeniusBridgeService implements IIntentProtocol {
         protocolResponse: response,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
+      const { message, error: errorMessageError } = createErrorMessage(error, this.protocol);
+      logger.error(`Failed to fetch price from ${this.protocol}; error: ${errorMessageError}`);
       throw sdkError(
         SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch GeniusBridge price, error: ${errorMessage}`,
+        `Failed to fetch GeniusBridge price, error: ${message}`,
       );
     }
   }
@@ -165,11 +184,11 @@ export class GeniusBridgeService implements IIntentProtocol {
         protocolResponse: response,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      const { message, error: errorMessageError } = createErrorMessage(error, this.protocol);
+      logger.error(`Failed to fetch quote from ${this.protocol}; error: ${errorMessageError}`);
       throw sdkError(
         SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch GeniusBridge quote, error: ${errorMessage}`,
+        `Failed to fetch GeniusBridge quote, error: ${message}`,
       );
     }
   }

@@ -1,4 +1,12 @@
 import axios from 'axios';
+import { SuiClient } from '@mysten/sui/client';
+
+import {
+  AftermathConfig,
+  AftermathPriceResponse,
+  AftermathSwapParams,
+  AftermathTransactionData,
+} from './aftermath.types';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
 import { IntentPriceParams } from '../../types/price-params';
@@ -8,26 +16,71 @@ import { QuoteResponse } from '../../types/quote-response';
 import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { sdkError } from '../../utils/throw-error';
-import {
-  AftermathConfig,
-  AftermathPriceResponse,
-  AftermathSwapParams,
-  AftermathTransactionData,
-} from './aftermath.types';
-import { SuiClient } from '@mysten/sui/client';
 import { createErrorMessage } from '../../utils/create-error-message';
 
 let logger: ILogger;
+
+/**
+ * Service class for interacting with the Aftermath protocol on the Sui blockchain.
+ * Implements the `IIntentProtocol` interface to provide price and quote fetching functionality.
+ *
+ * @remarks
+ * - Only supports the Sui network.
+ * - Uses Aftermath API endpoints for price and transaction data.
+ * - Handles configuration, logging, and Sui client initialization.
+ *
+ * @example
+ * ```typescript
+ * const aftermathService = new AftermathService(config);
+ * const price = await aftermathService.fetchPrice(params);
+ * const quote = await aftermathService.fetchQuote(params);
+ * ```
+ *
+ * @param config - Configuration object combining GeniusIntentsSDKConfig and AftermathConfig.
+ *
+ * @method isCorrectConfig - Type guard to validate configuration object.
+ * @method fetchPrice - Fetches price data from Aftermath API.
+ * @method fetchQuote - Fetches quote and transaction data from Aftermath API, estimates gas.
+ * @method isAftermathPriceResponse - Type guard for Aftermath price response.
+ */
 export class AftermathService implements IIntentProtocol {
+  /**
+   * The protocol enum value for Aftermath.
+   */
   public readonly protocol = ProtocolEnum.AFTERMATH;
+
+  /**
+   * The supported chain IDs for Aftermath.
+   */
   public readonly chains = [ChainIdEnum.SUI];
+
+  /**
+   * Indicates single chain support (true).
+   */
   public readonly singleChain = true;
+
+  /**
+   * Indicates multi-chain support (false).
+   */
   public readonly multiChain = false;
+
+  /**
+   * The base URL for Aftermath API.
+   */
   public readonly baseUrl: string;
+
+  /**
+   * Sui client instance for interacting with the Sui blockchain.
+   */
   protected readonly suiClient: SuiClient;
+
+  /**
+   * Optional overrides for quote responses
+   */
   protected readonly quoteParamOverrides: Partial<AftermathSwapParams> = {
     isSponsoredTx: false,
   };
+
   constructor(config: GeniusIntentsSDKConfig & AftermathConfig) {
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -49,7 +102,7 @@ export class AftermathService implements IIntentProtocol {
     };
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(config: {
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     return typeof config['suiRpcUrl'] === 'string' && config['suiRpcUrl'].length > 0;
@@ -109,12 +162,8 @@ export class AftermathService implements IIntentProtocol {
 
       return priceResponse;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch Aftermath price, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
@@ -206,12 +255,8 @@ export class AftermathService implements IIntentProtocol {
 
       return quoteResponse;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch Aftermath quote, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 

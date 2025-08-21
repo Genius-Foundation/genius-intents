@@ -1,29 +1,62 @@
 import axios from 'axios';
-import { IIntentProtocol } from '../../interfaces/intent-protocol';
-import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { IntentPriceParams } from '../../types/price-params';
-import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { QuoteResponse } from '../../types/quote-response';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { formatAddress } from '../../utils/address';
-import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
+
 import {
   OdosPriceResponse,
   OdosAssembleRequestBody,
   OdosQuoteResponse,
   OdosQuoteRequestBody,
 } from './odos.types';
-import { ZERO_ADDRESS } from '../../utils/constants';
-import { isNative } from '../../utils/is-native';
-import { sdkError } from '../../utils/throw-error';
-import { IntentQuoteParams } from '../../types/quote-params';
+import { IIntentProtocol } from '../../interfaces/intent-protocol';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
+import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
 import { createErrorMessage } from '../../utils/create-error-message';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
+import { IntentPriceParams } from '../../types/price-params';
+import { IntentQuoteParams } from '../../types/quote-params';
+import { QuoteResponse } from '../../types/quote-response';
+import { formatAddress } from '../../utils/address';
+import { ZERO_ADDRESS } from '../../utils/constants';
+import { sdkError } from '../../utils/throw-error';
+import { isNative } from '../../utils/is-native';
 
 let logger: ILogger;
+
+/**
+ * Service class for interacting with the ODOS protocol for token swaps and pricing.
+ * Implements the {@link IIntentProtocol} interface.
+ *
+ * @remarks
+ * - Supports single-chain swaps only.
+ * - Provides methods to fetch price and quote information from ODOS API.
+ * - Handles request body formatting, parameter validation, and error handling.
+ *
+ * @example
+ * ```typescript
+ * const odosService = new OdosService(config);
+ * const price = await odosService.fetchPrice(params);
+ * const quote = await odosService.fetchQuote(params);
+ * ```
+ */
 export class OdosService implements IIntentProtocol {
+  /**
+   * Mapping of chain IDs to RPC URLs.
+   */
   protected readonly rpcUrls: Record<number, string> = {};
+
+  /**
+   * Protocol identifier for ODOS.
+   */
   public readonly protocol = ProtocolEnum.ODOS;
+
+  /**
+   * Whether to include approval transactions in the swap.
+   */
   public includeApprovals?: boolean | undefined = false;
+
+  /**
+   * Supported chain IDs for ODOS.
+   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -34,14 +67,50 @@ export class OdosService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
   ];
-  baseUrl = 'https://api.odos.xyz';
+
+  /**
+   * Base URL for ODOS API.
+   */
+  public readonly baseUrl = 'https://api.odos.xyz';
+
+  /**
+   * Indicates support for single-chain swaps.
+   */
   public readonly singleChain = true;
+
+  /**
+   * Indicates support for multi-chain swaps.
+   */
   public readonly multiChain = false;
+
+  /**
+   * Endpoint for fetching token pricing information.
+   */
   public readonly priceEndpoint = '/pricing/token';
+
+  /**
+   * Endpoint for fetching swap quote information.
+   */
   public readonly quoteEndpoint = '/sor/quote/v2';
+
+  /**
+   * Endpoint for assembling swap transactions.
+   */
   public readonly assemblyEndpoint = '/sor/assemble';
+
+  /**
+   * Base URL for ODOS quote endpoint.
+   */
   public readonly quoteBaseUrl = this.baseUrl + this.quoteEndpoint;
+
+  /**
+   * Base URL for ODOS price endpoint.
+   */
   public readonly priceBaseUrl = this.baseUrl + this.priceEndpoint;
+
+  /**
+   * Base URL for ODOS assembly endpoint.
+   */
   public readonly assemblyBaseUrl = this.baseUrl + this.assemblyEndpoint;
 
   constructor(config?: GeniusIntentsSDKConfig) {
@@ -55,7 +124,7 @@ export class OdosService implements IIntentProtocol {
     logger = LoggerFactory.getLogger();
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(_config: {
+  public isCorrectConfig<T extends { [key: string]: string }>(_config: {
     [key: string]: string;
   }): _config is T {
     // Odos has no required config fields, all are optional
@@ -109,12 +178,10 @@ export class OdosService implements IIntentProtocol {
         slippage: params.slippage,
       };
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch swap price from ODOS: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError, {
+        cause: error,
+      });
     }
   }
 
@@ -192,12 +259,10 @@ export class OdosService implements IIntentProtocol {
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch swap quote from ODOS: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError, {
+        cause: error,
+      });
     }
   }
 

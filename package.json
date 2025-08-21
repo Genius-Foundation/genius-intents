@@ -3,7 +3,7 @@
   "version": "0.11.0",
   "description": "A unified SDK for interacting with intents-based protocols across multiple blockchains including Solana, Ethereum, and Sui",
   "license": "GNU",
-  "author": "Samuel Videau <samuel@videau.io>",
+  "author": "Samuel Videau <samuel@videau.io>, AltLoot <@altloot>",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "commonjs",
@@ -73,6 +73,11 @@
       "types": "./dist/protocols/genius-bridge/index.d.ts",
       "require": "./dist/protocols/genius-bridge/index.js",
       "import": "./dist/protocols/genius-bridge/index.js"
+    },
+    "./four-meme": {
+      "types": "./dist/protocols/four-meme/index.d.ts",
+      "require": "./dist/protocols/four-meme/index.js",
+      "import": "./dist/protocols/four-meme/index.js"
     }
   },
   "keywords": [

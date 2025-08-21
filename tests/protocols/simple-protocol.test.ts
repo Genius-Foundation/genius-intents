@@ -1,10 +1,10 @@
-import { JupiterService } from '../../src/protocols/jupiter/jupiter.service';
 import {
   PROTOCOL_EXPECTATIONS,
   TEST_TOKENS,
   TEST_WALLETS,
   createPriceParams,
 } from '../fixtures/test-data';
+import { JupiterService } from '../../src/protocols/jupiter/jupiter.service';
 import { ChainIdEnum, ProtocolEnum } from '../../src/types/enums';
 
 describe('Protocol Interface Tests', () => {
@@ -50,8 +50,7 @@ describe('Protocol Interface Tests', () => {
 
   describe('Configuration', () => {
     test('should allow price parameter overrides', () => {
-      const configuredService = new JupiterService({
-      });
+      const configuredService = new JupiterService({});
 
       expect(configuredService).toBeDefined();
     });

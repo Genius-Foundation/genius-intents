@@ -23,6 +23,7 @@ export type OKXConfig = {
   okxSecretKey: string;
   okxPassphrase: string;
   okxProjectId: string;
+  solanaRpcUrl?: string;
 };
 
 export type OkxQueryParams = {
@@ -42,7 +43,9 @@ export type OkxQuoteRequestBody = {
   fromTokenAddress: string;
   toTokenAddress: string;
   userWalletAddress: string;
-  slippage: number;
+  slippage?: number;
+  maxAutoSlippage?: number;
+  autoSlippage?: boolean;
   swapReceiverAddress: string;
 };
 
@@ -134,4 +137,75 @@ export type OkxMultiQuoteParams = {
   fromAddress: string;
   priceData: OkxPriceData;
   receiver?: string;
+};
+
+export type OkxSignatureParams = {
+  /**
+   * The API method to utilize
+   * (POST, GET, DELETE, PUT)
+   */
+  method: string;
+
+  /**
+   * The API endpoint to utilize
+   */
+  requestPath: string;
+
+  /**
+   * The request body to utilize
+   */
+  queryParams?: OkxQueryParams;
+
+  /**
+   * The request body to utilize
+   */
+  body?: string;
+};
+
+export type OkxSignatureResponse = {
+  /**
+   * The hashed signature to utilize
+   */
+  signature: string;
+
+  /**
+   * The timestamp to utilize
+   */
+  timestamp: string;
+};
+
+export type OkxSolanaQuoteResponse = {
+  code: string;
+  data: {
+    addressLookupTableAddresses?: string[]; // Legacy field name
+    addressLookupTableAccount?: string[]; // Current field name
+    instructionLists: ISolanaInstruction[];
+    routerResult?: unknown; // Additional fields from your actual response
+    tx?: unknown;
+  };
+  msg: string;
+};
+
+interface ISolanaInstruction {
+  data: string;
+  accounts: ISolanaAccount[];
+  programId: string;
+}
+
+interface ISolanaAccount {
+  isSigner: boolean;
+  isWritable: boolean;
+  pubkey: string;
+}
+
+export type OkxEvmQuoteToExecutionPayloadParams = {
+  tokenIn: string;
+  amountIn: string;
+  response: OkxQuoteResponse;
+  networkIn: ChainIdEnum;
+};
+
+export type OkxSolanaQuoteToExecutionPayloadParams = {
+  from: string;
+  response: OkxSolanaQuoteResponse;
 };

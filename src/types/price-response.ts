@@ -9,6 +9,7 @@ import { ZeroXPriceResponse } from '../protocols/zeroX/zeroX.types';
 import { DeBridgeQuoteResponse } from '../protocols/debridge/debridge.types';
 import { AcrossQuoteResponse } from '../protocols/across/across.types';
 import { GeniusBridgePriceResponse } from 'genius-bridge-sdk';
+import { FourMemePriceResponse } from '../protocols/four-meme/four-meme.types';
 
 export type RawProtocolPriceResponse =
   | OdosPriceResponse
@@ -21,7 +22,8 @@ export type RawProtocolPriceResponse =
   | GeniusBridgePriceResponse
   | AcrossQuoteResponse
   // Debridge only supports quotes
-  | DeBridgeQuoteResponse;
+  | DeBridgeQuoteResponse
+  | FourMemePriceResponse;
 
 export type PriceResponse = {
   protocol: ProtocolEnum;

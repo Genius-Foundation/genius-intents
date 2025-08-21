@@ -10,9 +10,11 @@ export enum ProtocolEnum {
   ZEROX = '0x',
   GENIUS_BRIDGE = 'genius-bridge',
   ACROSS = 'across',
+  FOUR_MEME = 'FourMeme',
 }
 
 export enum ChainIdEnum {
+  UNKNOWN = 0,
   SOLANA = 1399811149,
   AVALANCHE = 43114,
   SONIC = 146,
@@ -24,7 +26,8 @@ export enum ChainIdEnum {
   BLAST = 81457,
   POLYGON = 137,
   ETHEREUM = 1,
-  APTOS = 999,
+  APTOS = 1000,
+  HYPEREVM = 999,
 }
 
 export enum ChainVmTypeEnum {

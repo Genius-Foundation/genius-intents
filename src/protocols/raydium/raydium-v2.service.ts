@@ -1,39 +1,76 @@
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
-import { IIntentProtocol } from '../../interfaces/intent-protocol';
-import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { IntentPriceParams } from '../../types/price-params';
-import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { RaydiumApiPriceParams, RaydiumApiQuoteParams, RaydiumSdkConfig } from './raydium-v2.types';
+import { API_URLS, parseTokenAccountResp } from '@raydium-io/raydium-sdk-v2';
+import { Connection, PublicKey } from '@solana/web3.js';
+import axios from 'axios';
+
 import {
   RaydiumV2PriceResponse,
   RaydiumV2QuoteResponse,
   RaydiumV2FeeData,
   RaydiumTokenAccountsResponse,
+  RaydiumSdkConfig,
 } from './raydium-v2.types';
+import { IIntentProtocol } from '../../interfaces/intent-protocol';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
+import { RaydiumApiPriceParams, RaydiumApiQuoteParams } from './raydium-v2.types';
 import { NATIVE_SOL, WRAPPED_SOL } from '../../utils/constants';
 import { sdkError } from '../../utils/throw-error';
 import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
-import { IntentQuoteParams } from '../../types/quote-params';
 import { QuoteResponse } from '../../types/quote-response';
-import { Connection, PublicKey } from '@solana/web3.js';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import axios from 'axios';
-import { API_URLS, parseTokenAccountResp } from '@raydium-io/raydium-sdk-v2';
 import { convertBase64ToBase58 } from '../../utils/base64-to-base58';
 import { createErrorMessage } from '../../utils/create-error-message';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
+import { IntentPriceParams } from '../../types/price-params';
+import { IntentQuoteParams } from '../../types/quote-params';
 
 let logger: ILogger;
+/**
+ * The `RaydiumV2Service` class implements the IIntentProtocol interface for token swaps
+ * on the Solana blockchain using the Raydium V2 protocol. It provides functionality for
+ * fetching price quotes and generating transaction data for token swaps on Solana.
+ *
+ * @implements {IIntentProtocol}
+ */
 export class RaydiumV2Service implements IIntentProtocol {
+  /**
+   * The protocol identifier for Raydium V2.
+   */
   public readonly protocol = ProtocolEnum.RAYDIUM_V2;
+
+  /**
+   * The list of blockchain networks supported by the Raydium V2 service.
+   * Currently only supports the Solana blockchain.
+   */
   public readonly chains = [ChainIdEnum.SOLANA];
 
+  /**
+   * Indicates that the service operates only on a single blockchain.
+   */
   public readonly singleChain: boolean = true;
+
+  /**
+   * Indicates that the service does not support cross-chain operations.
+   */
   public readonly multiChain: boolean = false;
 
+  /**
+   * The transaction version to use for Raydium V2 transactions.
+   */
   public readonly txVersion: string = 'V0';
 
+  /**
+   * The Solana connection instance for interacting with the Solana blockchain.
+   */
   protected readonly connection: Connection | undefined;
 
+  /**
+   * Creates a new instance of the RaydiumV2Service.
+   *
+   * @param {GeniusIntentsSDKConfig} config - Configuration parameters for the service.
+   *
+   * @throws {SdkError} If no RPC URL is provided for the Solana blockchain.
+   */
   constructor(config: GeniusIntentsSDKConfig & RaydiumSdkConfig) {
     if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
@@ -47,16 +84,37 @@ export class RaydiumV2Service implements IIntentProtocol {
     this.connection = new Connection(config.solanaRpcUrl, 'confirmed');
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(config: {
+  /**
+   * Checks if the provided configuration object has a valid 'solanaRpcUrl' property.
+   *
+   * @typeParam T - The expected shape of the configuration object, with string values.
+   * @param config - The configuration object to validate.
+   * @returns True if 'solanaRpcUrl' exists and is a non-empty string; otherwise, false.
+   */
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     return typeof config['solanaRpcUrl'] === 'string' && config['solanaRpcUrl'].length > 0;
   }
 
-  public async fetchPrice(
-    params: IntentPriceParams,
-  ): Promise<
-    Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: RaydiumV2PriceResponse }
+  /**
+   * Fetches a price quote for a token swap from the Raydium V2 API.
+   *
+   * @param {IntentPriceParams} params - The parameters required for the price quote.
+   *
+   * @returns {Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: RaydiumV2PriceResponse }>}
+   * A promise that resolves to a `PriceResponse` object containing:
+   * - The amount of output tokens expected from the swap.
+   * - The price impact of the swap.
+   * - The raw response from the Raydium V2 API.
+   *
+   * @throws {SdkError} If the parameters are invalid or unsupported.
+   * @throws {SdkError} If there's an error fetching the price from Raydium V2.
+   */
+  public async fetchPrice(params: IntentPriceParams): Promise<
+    Omit<PriceResponse, 'protocolResponse'> & {
+      protocolResponse: RaydiumV2PriceResponse;
+    }
   > {
     this.validatePriceParams(params);
     const { tokenIn, tokenOut, amountIn, slippage } = params;
@@ -79,6 +137,10 @@ export class RaydiumV2Service implements IIntentProtocol {
         slippage,
       });
 
+      if (!priceResponse?.success) {
+        throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, 'Raydium V2 price request failed');
+      }
+
       const amountOut = priceResponse.data.outputAmount;
       const priceImpact = priceResponse.data.priceImpactPct;
 
@@ -100,15 +162,27 @@ export class RaydiumV2Service implements IIntentProtocol {
         priceImpact,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch Raydium V2 swap price`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch Raydium V2 swap price, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Fetches a swap quote from the Raydium V2 API and builds the transaction data
+   * needed to execute the swap on Solana.
+   *
+   * @param {IntentQuoteParams} params - The parameters required for the swap quote.
+   *
+   * @returns {Promise<QuoteResponse>} A promise that resolves to a `QuoteResponse` object containing:
+   * - The expected amount of output tokens.
+   * - The transaction data needed to execute the swap.
+   *
+   * @throws {SdkError} If the Solana connection is not initialized.
+   * @throws {SdkError} If the price response is invalid or missing.
+   * @throws {SdkError} If there's an error fetching token accounts.
+   * @throws {SdkError} If there's an error fetching the quote from Raydium V2.
+   */
   public async fetchQuote(params: IntentQuoteParams): Promise<QuoteResponse> {
     this.validatePriceParams(params);
 
@@ -199,7 +273,7 @@ export class RaydiumV2Service implements IIntentProtocol {
 
       logger.debug('Successfully received quote from Raydium V2');
 
-      return {
+      const swapQuoteResponse: QuoteResponse = {
         protocol: ProtocolEnum.RAYDIUM_V2,
         tokenIn: priceResponse.tokenIn,
         tokenOut: priceResponse.tokenOut,
@@ -213,16 +287,24 @@ export class RaydiumV2Service implements IIntentProtocol {
         protocolResponse: raydiumQuoteResponse,
         svmExecutionPayload: [encodedTransaction],
       };
+
+      return swapQuoteResponse;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch Raydium V2 quote, error: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Makes a request to the Raydium V2 API to get a price quote for a token swap.
+   *
+   * @param {RaydiumApiPriceParams} params - The parameters for the price request.
+   *
+   * @returns {Promise<RaydiumV2PriceResponse>} A promise that resolves to the price response from Raydium V2.
+   *
+   * @throws {SdkError} If there's an error with the HTTP request to the Raydium V2 API.
+   */
   public async requestRaydiumV2Price(
     params: RaydiumApiPriceParams,
   ): Promise<RaydiumV2PriceResponse> {
@@ -247,15 +329,21 @@ export class RaydiumV2Service implements IIntentProtocol {
 
       return response.data;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error('Failed to request Raydium V2 price', errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to request Raydium V2 price: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
+  /**
+   * Makes a request to the Raydium V2 API to get a transaction quote for a token swap.
+   *
+   * @param {RaydiumApiQuoteParams} params - The parameters for the quote request.
+   *
+   * @returns {Promise<RaydiumV2QuoteResponse>} A promise that resolves to the quote response from Raydium V2.
+   *
+   * @throws {SdkError} If there's an error with the HTTP request to the Raydium V2 API.
+   */
   public async requestRaydiumV2Quote(
     params: RaydiumApiQuoteParams,
   ): Promise<RaydiumV2QuoteResponse> {
@@ -288,15 +376,19 @@ export class RaydiumV2Service implements IIntentProtocol {
 
       return response.data;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error('Failed to request Raydium V2 quote', errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to request Raydium V2 quote: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
+  /**
+   * Makes a request to the Raydium V2 API to get the current fee tiers for compute budget.
+   *
+   * @returns {Promise<RaydiumV2FeeData>} A promise that resolves to the fee data from Raydium V2.
+   *
+   * @throws {SdkError} If there's an error with the HTTP request to the Raydium V2 API.
+   */
   public async requestRaydiumFees(): Promise<RaydiumV2FeeData> {
     const url = `${API_URLS.BASE_HOST}${API_URLS.PRIORITY_FEE}`;
     logger.debug(`Making Raydium V2 fees request to: ${url}`);
@@ -311,15 +403,23 @@ export class RaydiumV2Service implements IIntentProtocol {
 
       return response.data;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error('Failed to request Raydium fees', errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to request Raydium fees: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
+  /**
+   * Fetches token account data for a specified owner on Solana.
+   * This includes both SPL Token and Token-2022 accounts.
+   *
+   * @param {string} owner - The owner's public key as a string.
+   * @param {Connection} connection - The Solana connection instance.
+   *
+   * @returns {Promise<RaydiumTokenAccountsResponse>} A promise that resolves to the token accounts data.
+   *
+   * @throws {SdkError} If there's an error fetching the token account data.
+   */
   protected async fetchTokenAccountData(
     owner: string,
     connection: Connection,
@@ -353,15 +453,19 @@ export class RaydiumV2Service implements IIntentProtocol {
 
       return tokenAccountData;
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch token account data`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.FAILED_HTTP_REQUEST,
-        `Failed to fetch token account data: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.FAILED_HTTP_REQUEST, formattedError);
     }
   }
 
+  /**
+   * Validates the parameters for a price quote request.
+   *
+   * @param {IntentPriceParams} params - The parameters to validate.
+   *
+   * @throws {SdkError} If any of the parameters are invalid or unsupported.
+   */
   protected validatePriceParams(params: IntentPriceParams): void {
     const { networkIn, networkOut } = params;
 
@@ -379,6 +483,13 @@ export class RaydiumV2Service implements IIntentProtocol {
     }
   }
 
+  /**
+   * Type guard to check if a response is a valid Raydium V2 price response.
+   *
+   * @param {RawProtocolPriceResponse} response - The response to check.
+   *
+   * @returns {boolean} True if the response is a valid Raydium V2 price response.
+   */
   protected isRaydiumPriceResponse(
     response: RawProtocolPriceResponse,
   ): response is RaydiumV2PriceResponse {

@@ -10,6 +10,8 @@ export * as ZeroX from './protocols/zeroX';
 export * as DeBridge from './protocols/debridge';
 export * as GeniusBridge from './protocols/genius-bridge';
 export * as Across from './protocols/across';
+export * as FourMeme from './protocols/four-meme';
+export * as GeniusIntentsUtils from './utils';
 
 // Core types and utilities
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum, ChainVmTypeEnum } from './types/enums';

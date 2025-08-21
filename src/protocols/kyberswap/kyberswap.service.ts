@@ -1,16 +1,5 @@
 import axios from 'axios';
-import { IIntentProtocol } from '../../interfaces/intent-protocol';
-import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
-import { IntentPriceParams } from '../../types/price-params';
-import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
-import { IntentQuoteParams } from '../../types/quote-params';
-import { QuoteResponse } from '../../types/quote-response';
-import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
-import { formatAddress } from '../../utils/address';
-import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
-import { NATIVE_ADDRESS } from '../../utils/constants';
-import { isNative } from '../../utils/is-native';
-import { sdkError } from '../../utils/throw-error';
+
 import {
   KyberswapConfig,
   KyberswapPriceRequestBody,
@@ -18,12 +7,38 @@ import {
   KyberswapQuoteRequestBody,
   KyberswapQuoteResponse,
 } from './kyberswap.types';
+import { IIntentProtocol } from '../../interfaces/intent-protocol';
+import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
+import { PriceResponse, RawProtocolPriceResponse } from '../../types/price-response';
+import { QuoteResponse } from '../../types/quote-response';
+import { formatAddress } from '../../utils/address';
+import { ILogger, LoggerFactory, LogLevelEnum } from '../../utils/logger';
+import { NATIVE_ADDRESS } from '../../utils/constants';
+import { isNative } from '../../utils/is-native';
+import { sdkError } from '../../utils/throw-error';
 import { createErrorMessage } from '../../utils/create-error-message';
+import { GeniusIntentsSDKConfig } from '../../types/sdk-config';
+import { IntentPriceParams } from '../../types/price-params';
+import { IntentQuoteParams } from '../../types/quote-params';
 import { chainIdToName } from '../../utils/chain-id-name';
 
 let logger: ILogger;
+/**
+ * The `KyberswapService` class implements the IIntentProtocol interface for token swaps
+ * using the KyberSwap aggregator. It provides functionality for fetching price quotes
+ * and generating transaction data for token swaps on various EVM-compatible blockchains.
+ *
+ * @implements {IIntentProtocol}
+ */
 export class KyberswapService implements IIntentProtocol {
+  /**
+   * The protocol identifier for KyberSwap.
+   */
   public readonly protocol = ProtocolEnum.KYBERSWAP;
+
+  /**
+   * The list of blockchain networks supported by the KyberSwap service.
+   */
   public readonly chains = [
     ChainIdEnum.ETHEREUM,
     ChainIdEnum.ARBITRUM,
@@ -34,13 +49,36 @@ export class KyberswapService implements IIntentProtocol {
     ChainIdEnum.BASE,
     ChainIdEnum.SONIC,
   ];
+
+  /**
+   * Indicates that the service operates only on a single blockchain.
+   */
   public readonly singleChain = true;
+
+  /**
+   * Indicates that the service does not support cross-chain operations.
+   */
   public readonly multiChain = false;
+
+  /**
+   * The endpoint for price quote requests.
+   */
   public readonly priceEndpoint = '/api/v1/routes';
+
+  /**
+   * The endpoint for transaction quote requests.
+   */
   public readonly quoteEndpoint = '/api/v1/route/build';
 
-  public baseUrl: string;
-  public clientId: string;
+  /**
+   * The client ID for KyberSwap API requests.
+   */
+  public readonly clientId: string;
+
+  /**
+   * The base URL for the KyberSwap API.
+   */
+  public readonly baseUrl: string;
 
   constructor(config: GeniusIntentsSDKConfig & KyberswapConfig) {
     if (config?.debug) {
@@ -56,16 +94,38 @@ export class KyberswapService implements IIntentProtocol {
     this.clientId = config.kyberswapClientId;
   }
 
-  isCorrectConfig<T extends { [key: string]: string }>(config: {
+  /**
+   * Checks if the provided configuration object has a valid `clientId` property.
+   *
+   * @typeParam T - The expected shape of the configuration object, extending a record of string keys and string values.
+   * @param config - The configuration object to validate.
+   * @returns `true` if the configuration contains a non-empty string `clientId` property, otherwise `false`.
+   */
+  public isCorrectConfig<T extends { [key: string]: string }>(config: {
     [key: string]: string;
   }): config is T {
     return typeof config['clientId'] === 'string' && config['clientId'].length > 0;
   }
 
-  public async fetchPrice(
-    params: IntentPriceParams,
-  ): Promise<
-    Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: KyberswapPriceResponse }
+  /**
+   * Fetches a price quote for a token swap from the KyberSwap API.
+   *
+   * @param {IntentPriceParams} params - The parameters required for the price quote.
+   *
+   * @returns {Promise<Omit<PriceResponse, 'protocolResponse'> & { protocolResponse: KyberswapPriceResponse }>}
+   * A promise that resolves to a `PriceResponse` object containing:
+   * - The amount of output tokens expected from the swap.
+   * - Gas estimation for the transaction.
+   * - The raw response from the KyberSwap API.
+   *
+   * @throws {SdkError} If the parameters are invalid or unsupported.
+   * @throws {SdkError} If the API returns an invalid response.
+   * @throws {SdkError} If there's an error fetching the price.
+   */
+  public async fetchPrice(params: IntentPriceParams): Promise<
+    Omit<PriceResponse, 'protocolResponse'> & {
+      protocolResponse: KyberswapPriceResponse;
+    }
   > {
     this.validatePriceParams(params);
 
@@ -131,15 +191,28 @@ export class KyberswapService implements IIntentProtocol {
         slippage: params.slippage,
       };
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch swap price from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch swap price from KyberSwap: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Fetches a swap quote from the KyberSwap API and builds the transaction data
+   * needed to execute the swap.
+   *
+   * @param {QuoteParams} params - The parameters required for the swap quote.
+   *
+   * @returns {Promise<QuoteResponse & { protocolResponse: KyberswapQuoteResponse }>}
+   * A promise that resolves to a `QuoteResponse` object containing:
+   * - The expected amount of output tokens.
+   * - The transaction data needed to execute the swap.
+   * - Gas estimates for the transaction.
+   *
+   * @throws {SdkError} If the parameters are invalid or unsupported.
+   * @throws {SdkError} If the API returns an invalid response.
+   * @throws {SdkError} If there's an error fetching the quote.
+   */
   public async fetchQuote(
     params: IntentQuoteParams,
   ): Promise<QuoteResponse & { protocolResponse: KyberswapQuoteResponse }> {
@@ -156,7 +229,9 @@ export class KyberswapService implements IIntentProtocol {
     }
 
     if (!this.isKyberswapPriceResponse(priceResponse.protocolResponse)) {
-      logger.error('Invalid price response received', undefined, { priceResponse });
+      logger.error('Invalid price response received', undefined, {
+        priceResponse,
+      });
       throw sdkError(SdkErrorEnum.PRICE_NOT_FOUND, 'Invalid price response received');
     }
 
@@ -196,7 +271,7 @@ export class KyberswapService implements IIntentProtocol {
       const gasEstimate = kyberswapQuoteResponse.gas;
       const gasLimit = Math.floor(Number(gasEstimate) * 1.1).toString(); // 10% buffer
 
-      return {
+      const quote = {
         protocol: this.protocol,
         tokenIn: tokenIn,
         tokenOut: priceResponse.protocolResponse.routeSummary.tokenOut,
@@ -204,7 +279,7 @@ export class KyberswapService implements IIntentProtocol {
         amountOut: kyberswapQuoteResponse.amountOut,
         from,
         receiver: receiver || from,
-        evmExecutionPayload: {
+        executionPayload: {
           transactionData: {
             data: kyberswapQuoteResponse.data,
             to: kyberswapQuoteResponse.routerAddress,
@@ -223,20 +298,28 @@ export class KyberswapService implements IIntentProtocol {
         networkOut,
         protocolResponse: kyberswapQuoteResponse,
       };
+
+      return quote;
     } catch (error: unknown) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
-      throw sdkError(
-        SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch swap quote from KyberSwap: ${errorMessage}`,
-      );
+      const formattedError = createErrorMessage(error, this.protocol);
+
+      throw sdkError(SdkErrorEnum.QUOTE_NOT_FOUND, formattedError);
     }
   }
 
+  /**
+   * Transforms the price parameters to the format expected by the KyberSwap API.
+   *
+   * @param {IntentPriceParams} params - The original price parameters.
+   *
+   * @returns {KyberswapPriceRequestBody} The transformed parameters ready for the KyberSwap API.
+   */
   protected priceParamsToRequestBody(params: IntentPriceParams): KyberswapPriceRequestBody {
     const { tokenIn, tokenOut, amountIn, slippage, from } = params;
 
-    logger.debug('Converting price params to KyberSwap request body', { params });
+    logger.debug('Converting price params to KyberSwap request body', {
+      params,
+    });
 
     const requestBody: KyberswapPriceRequestBody = {
       tokenIn: isNative(tokenIn) ? NATIVE_ADDRESS : tokenIn,
@@ -253,6 +336,13 @@ export class KyberswapService implements IIntentProtocol {
     return requestBody;
   }
 
+  /**
+   * Validates the parameters for a price quote request.
+   *
+   * @param {IntentPriceParams} params - The parameters to validate.
+   *
+   * @throws {SdkError} If any of the parameters are invalid or unsupported.
+   */
   protected validatePriceParams(params: IntentPriceParams): void {
     const { networkIn, networkOut } = params;
     logger.debug('Validating price params');
@@ -275,6 +365,13 @@ export class KyberswapService implements IIntentProtocol {
     }
   }
 
+  /**
+   * Type guard to check if a response is a valid KyberSwap price response.
+   *
+   * @param {RawProtocolPriceResponse} response - The response to check.
+   *
+   * @returns {boolean} True if the response is a valid KyberSwap price response.
+   */
   protected isKyberswapPriceResponse(
     response: RawProtocolPriceResponse,
   ): response is KyberswapPriceResponse {
