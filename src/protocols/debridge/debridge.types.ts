@@ -1,14 +1,9 @@
 import { ChainIdEnum } from '../../types/enums';
 
 export type DeBridgeConfig = {
-  privateUrl?: string;
-  debug?: boolean;
-  rpcUrls?: Record<number, string | string[]>;
+  deBridgePrivateUrl?: string;
   debridgeAccessToken?: string;
-  authority?: {
-    networkInAddress: string;
-    networkOutAddress: string;
-  };
+  solanaRpcUrl?: string;
 };
 
 export type DeBridgePriceParams = {
@@ -20,6 +15,11 @@ export type DeBridgePriceParams = {
   amountIn: string;
   slippage: number;
   from: string;
+  to?: string;
+  authority?: {
+    networkInAddress: string;
+    networkOutAddress: string;
+  };
 };
 
 export type DeBridgeQuoteParams = DeBridgePriceParams & {
@@ -28,7 +28,7 @@ export type DeBridgeQuoteParams = DeBridgePriceParams & {
     networkInAddress: string;
     networkOutAddress: string;
   };
-  priceResponse: unknown;
+  priceResponse?: DeBridgeQuoteResponse;
 };
 
 // Token type for both source and destination chains
