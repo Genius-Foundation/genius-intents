@@ -8,6 +8,7 @@ import {
   RaydiumV2QuoteResponse,
   RaydiumV2FeeData,
   RaydiumTokenAccountsResponse,
+  RaydiumSdkConfig,
 } from './raydium-v2.types';
 import { IIntentProtocol } from '../../interfaces/intent-protocol';
 import { ChainIdEnum, ProtocolEnum, SdkErrorEnum } from '../../types/enums';
@@ -70,34 +71,17 @@ export class RaydiumV2Service implements IIntentProtocol {
    *
    * @throws {SdkError} If no RPC URL is provided for the Solana blockchain.
    */
-  constructor(config?: GeniusIntentsSDKConfig) {
-    if (config?.debug) {
+  constructor(config: GeniusIntentsSDKConfig & RaydiumSdkConfig) {
+    if (config.debug) {
       LoggerFactory.configure(LoggerFactory.createConsoleLogger({ level: LogLevelEnum.DEBUG }));
     }
     // Use custom logger if provided
-    else if (config?.logger) {
+    else if (config.logger) {
       LoggerFactory.configure(config.logger);
     }
     logger = LoggerFactory.getLogger();
 
-    if (config?.rpcUrls) {
-      const solanaRpcUrl = config.rpcUrls[ChainIdEnum.SOLANA];
-      if (solanaRpcUrl) {
-        this.connection = new Connection(solanaRpcUrl, 'confirmed');
-      } else {
-        logger.error('Raydium V2 Service requires a Solana RPC URL');
-        throw sdkError(
-          SdkErrorEnum.MISSING_RPC_URL,
-          'Raydium V2 Service requires a Solana RPC URL',
-        );
-      }
-    } else {
-      logger.error('Raydium V2 Service requires an RPC URL configuration');
-      throw sdkError(
-        SdkErrorEnum.MISSING_RPC_URL,
-        'Raydium V2 Service requires an RPC URL configuration',
-      );
-    }
+    this.connection = new Connection(config.solanaRpcUrl, 'confirmed');
   }
 
   /**
