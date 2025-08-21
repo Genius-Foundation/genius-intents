@@ -59,7 +59,7 @@ describe('Protocol Interface Tests', () => {
     test('should handle private URL configuration', () => {
       const jupiterPrivateUrl = 'https://private-jupiter-api.example.com';
       const configuredService = new JupiterService({
-        jupiterPrivateUrl,
+        privateUrl: jupiterPrivateUrl,
       });
 
       expect(configuredService.baseUrl).toBe(jupiterPrivateUrl);
