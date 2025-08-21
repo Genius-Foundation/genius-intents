@@ -1,7 +1,8 @@
 import { AxiosError } from 'axios';
+import { ProtocolEnum } from '../types/enums';
 
 type ErrorPayload = {
-  protocol: string;
+  protocol: ProtocolEnum;
   message: string;
   error: string; // concise, user-facing
 };
@@ -43,7 +44,7 @@ function stringifyDataCompact(data: unknown): string {
   }
 }
 
-export function createErrorMessage(error: unknown, protocol: string): ErrorPayload {
+export function createErrorMessage(error: unknown, protocol: ProtocolEnum): ErrorPayload {
   // default scaffold
   const payload: ErrorPayload = {
     protocol,

@@ -91,11 +91,11 @@ export class GeniusBridgeService implements IIntentProtocol {
         protocolResponse: response,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch price from ${this.protocol}`, errorMessageError);
+      const { message, error: errorMessageError } = createErrorMessage(error, this.protocol);
+      logger.error(`Failed to fetch price from ${this.protocol}; error: ${errorMessageError}`);
       throw sdkError(
         SdkErrorEnum.PRICE_NOT_FOUND,
-        `Failed to fetch GeniusBridge price, error: ${errorMessage}`,
+        `Failed to fetch GeniusBridge price, error: ${message}`,
       );
     }
   }
@@ -165,11 +165,11 @@ export class GeniusBridgeService implements IIntentProtocol {
         protocolResponse: response,
       };
     } catch (error) {
-      const { errorMessage, errorMessageError } = createErrorMessage(error);
-      logger.error(`Failed to fetch quote from ${this.protocol}`, errorMessageError);
+      const { message, error: errorMessageError } = createErrorMessage(error, this.protocol);
+      logger.error(`Failed to fetch quote from ${this.protocol}; error: ${errorMessageError}`);
       throw sdkError(
         SdkErrorEnum.QUOTE_NOT_FOUND,
-        `Failed to fetch GeniusBridge quote, error: ${errorMessage}`,
+        `Failed to fetch GeniusBridge quote, error: ${message}`,
       );
     }
   }
