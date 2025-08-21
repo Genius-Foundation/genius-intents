@@ -73,6 +73,11 @@
       "types": "./dist/protocols/genius-bridge/index.d.ts",
       "require": "./dist/protocols/genius-bridge/index.js",
       "import": "./dist/protocols/genius-bridge/index.js"
+    },
+    "./four-meme": {
+      "types": "./dist/protocols/four-meme/index.d.ts",
+      "require": "./dist/protocols/four-meme/index.js",
+      "import": "./dist/protocols/four-meme/index.js"
     }
   },
   "keywords": [
